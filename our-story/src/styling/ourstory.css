@@ -1,0 +1,143 @@
+.page-background {
+  background: linear-gradient(to bottom right, #e4f0fb, #cfe6f9);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 60px 0;
+}
+
+.paper-sheet {
+  background: #fff;
+  width: 800px;
+  max-width: 90%;
+  min-height: 1000px;
+  padding: 60px 80px;
+  border-radius: 8px;
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid #ddd;
+}
+
+.story-page-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #0078ff;
+  margin-bottom: 0rem;
+  text-align: center;
+}
+
+.story-page-subtitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 3rem;
+  text-align: center;
+}
+
+.ourstory-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3rem;
+  margin-bottom: 80px;
+}
+
+.paper-sheet > .ourstory-container:nth-of-type(even) {
+  flex-direction: row-reverse;
+}
+
+.story-text {
+  flex: 1;
+  background-color: #f7f7f7;
+  padding: 40px;
+  border-radius: 12px;
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.story-paragraph {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #333;
+}
+
+.story-media {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.media-frame {
+  width: 70%;
+  max-width: 400px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 400ms ease, box-shadow 300ms ease;
+  cursor: zoom-in;
+}
+
+.media-frame:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+}
+
+/* 🎞️ Gallery grid */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.gallery-item {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: zoom-in;
+  transition: transform 0.3s ease;
+}
+
+.gallery-item:hover {
+  transform: scale(1.05);
+}
+
+/* 🖼️ Fullscreen fade-in effect */
+:fullscreen,
+:-webkit-full-screen,
+:-moz-full-screen {
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    background: rgba(0, 0, 0, 0.5);
+  }
+  to {
+    opacity: 1;
+    background: rgba(0, 0, 0, 1);
+  }
+}
+
+.photo-date {
+  margin-top: 12px;
+  font-size: 0.95rem;
+  color: #777;
+  font-style: italic;
+}
+
+/* 📱 Responsive behavior */
+@media (max-width: 900px) {
+  .paper-sheet {
+    padding: 40px 20px;
+  }
+  .ourstory-container,
+  .paper-sheet > .ourstory-container:nth-of-type(even) {
+    flex-direction: column;
+  }
+  .story-text {
+    text-align: center;
+  }
+}
