@@ -3,21 +3,16 @@ import ball from "../images/ball.jpg";
 import stealingmyphone from "../images/stealingmyphone.png";
 import icecreamday from "../images/icecreamday.png";
 import birthday from "../images/birthday.jpg";
-import teasing from "../images/teasing.mp4";
 import converse from "../images/converse.jpg";
 import sleepcall from "../images/sleepcall.png";
 import cuteselfie from "../images/cuteselfie.jpg";
 import datenight from "../images/datenight.jpg";
-import karaoke from "../images/karaoke.mov";
-import missionbayswing from "../images/missionbayswing.mov";
 import arabnight from "../images/arabnight.jpg";
 import legomuseum from "../images/legomuseum.jpg";
-import facialnight from "../images/facialnight.mov";
 import shurbsparty from "../images/shurbsparty.jpg";
 import ebisudinner from "../images/ebisudinner.jpg";
 import lucky8 from "../images/lucky8.jpg";
 import sleepyhead from "../images/sleepyhead.jpg";
-import paradiseice from "../images/paradiseice.mov";
 import paradiseselfie from "../images/paradiseselfie.jpg";
 import bbqcloe from "../images/bbqcloe.jpg";
 import facetimeeyes from "../images/facetimeeyes.png";
@@ -28,8 +23,7 @@ import three from "../images/3.jpg";
 import four from "../images/4.jpg";
 import five from "../images/5.jpg";
 import six from "../images/6.jpg";
-import seven from "../images/7.mov";
-import eight from "../images/8.mov";
+
 import "../styling/ourstory.css";
 
 function handleFullscreen(e) {
@@ -94,7 +88,7 @@ const MEMORIES = [
     id: 6,
     type: "video",
     date: "23.04.2024",
-    src: teasing,
+    src: "https://res.cloudinary.com/dy6seijhm/video/upload/v1760835868/teasing_un8ca0.mp4",
     alt: "whoops",
     text:
       "The era of teasing you on your gag reflex non stop where you would punch me while trying not to throw up all over me. I'll always be your biggest bully :)",
@@ -144,7 +138,7 @@ const MEMORIES = [
     id: 11,
     type: "video",
     date: "26.07.2024",
-    src: karaoke,
+    src: "https://res.cloudinary.com/dy6seijhm/video/upload/v1760836550/karaoke_wtpgoq.mp4",
     alt: "karaoke",
     text: "Ima just leave this here",
     variant: "lg",
@@ -153,7 +147,7 @@ const MEMORIES = [
     id: 12,
     type: "video",
     date: "27.07.2024",
-    src: missionbayswing,
+    src: "https://res.cloudinary.com/dy6seijhm/video/upload/v1760835867/missionbayswing_qp7eya.mp4",
     alt: "swing on mission bay",
     text:
       "One of the core memories I had from the start of our relationship, the song, the feelings, the love, everything was perfect during this period of time. I have never felt a love so prominent in my life, from someone who cares so deeply and knew how to be gentle with my heart",
@@ -183,7 +177,7 @@ const MEMORIES = [
     id: 15,
     type: "video",
     date: "16.08.2024",
-    src: facialnight,
+    src: "https://res.cloudinary.com/dy6seijhm/video/upload/v1760836173/facialnight_geqnpm.mp4",
     alt: "giving me a facial",
     text:
       "Facial night, probs has to be one of the cutest nights we've ever had. To feel your gentle touch and to see the love you had in your eyes. We had so many laughs in that moment and it was so adorable. I miss it heaps. Don't think I will ever be able to get over you or move on.",
@@ -206,7 +200,7 @@ const MEMORIES = [
     src: ebisudinner,
     alt: "dinner at ebisu",
     text:
-      "One of the yummiest dinners we've had together, I still remember the taste of the duck with that amazing fucking sauce, couldn't beat that restaurant till this day. Also reminds me a lot on how shy you used to be around me, you used to be so shy and nervous for absolutely no reason, was very cute.",
+      "One of the yummiest dinners we've had together, I still remember the taste of the duck with that amazing sauce, couldn't beat that restaurant till this day. Also reminds me a lot on how shy you used to be around me, you used to be so shy and nervous for absolutely no reason, was very cute.",
     variant: "lg",
   },
   {
@@ -233,7 +227,7 @@ const MEMORIES = [
     id: 20,
     type: "video",
     date: "14.09.2024",
-    src: paradiseice,
+    src: "https://res.cloudinary.com/dy6seijhm/video/upload/v1760835866/paradiseice_ny7weg.mp4",
     alt: "ice skating",
     text:
       "looking back at all these videos of us and how we used to look at eachother really kills me sometimes, I mean look at this video and how fucking cute it was, we literally love each other so much and it shows.",
@@ -261,25 +255,15 @@ const MEMORIES = [
   {
     id: 23,
     type: "image",
-    date: "20.11.2024",
+    date: "12.12.2024",
     src: facetimeeyes,
-    alt: "beautiful hazel eyes",
+    alt: "facetime eyes",
     text:
-      "Random facetime call where I took a snapshot of what your eyes looked like cause they looked so beautiful as per usual. The way looking into your beautiful eyes makes me feel is a memory I never wanna forget. It'll always forever be you in my heart that I think of wherever I go, no pair of eyes will ever be the same as yours, and not a single soul in this world will ever make me feel as loved and as safe as you did.",
+      "Those long night FaceTimes where we’d stare at each other endlessly, laughing, talking nonsense and just feeling close even from miles apart — the warmth I felt will forever stick with me.",
     variant: "lg",
   },
   {
     id: 24,
-    type: "image",
-    date: "13.12.2024",
-    src: bdaysupriseforme,
-    alt: "my beautiful birthday you planned out for me",
-    text:
-      "A birthday where I was shown love, appreciation and what it feels like to be spoilt by the one you loved. This birthday was the best birthday I've ever had from anyone, the amount of time you took to plan everything out and make me feel so special. I owe you the entire world for it and your kindness and care will never be something I will ever forget.",
-    variant: "lg",
-  },
-  {
-    id: 25,
     type: "gallery",
     date: "13.12.2024",
     alt: "collage gallery",
@@ -290,11 +274,11 @@ const MEMORIES = [
       { src: four, type: "image" },
       { src: five, type: "image" },
       { src: six, type: "image" },
-      { src: seven, type: "video" },
-      { src: eight, type: "video" },
+      { src: "https://res.cloudinary.com/dy6seijhm/video/upload/v1760835873/7_h6ftcn.mp4", type: "video" },
+      { src: "https://res.cloudinary.com/dy6seijhm/video/upload/v1760835865/8_gwo5bp.mp4", type: "video" },
     ],
     text:
-      "I feel like there may be so many memories I may be missing and I look back and wish I could save and capture every moment with you, but I guess the beauty of it is that I typically enjoy things in the moment, hence why this may be a short memory page. But Ik damn well we've got a million combined, still in the process of adding more....",
+      "I feel like there may be so many memories I may be missing and I look back and wish I could save and capture every moment with you, but I guess the beauty of it is that I typically enjoy things in the moment, hence why this may be a short memory page. But Ik damn well we've got a million combined, still in the process of adding more...",
     variant: "lg",
   },
 ];
@@ -339,6 +323,7 @@ export default function Ourstory() {
                           muted
                           loop
                           playsInline
+                          controls
                           onClick={handleFullscreen}
                         />
                       ) : (
