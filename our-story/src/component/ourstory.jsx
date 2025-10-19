@@ -1,4 +1,4 @@
-import firstDate from "../images/first-date.JPG";
+import firstDate from "../images/first-date.jpg";
 import ball from "../images/ball.JPG";
 import stealingmyphone from "../images/stealingmyphone.PNG";
 import icecreamday from "../images/icecreamday.PNG";
