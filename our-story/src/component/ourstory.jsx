@@ -262,8 +262,20 @@ const MEMORIES = [
       "Those long night FaceTimes where we’d stare at each other endlessly, laughing, talking nonsense and just feeling close even from miles apart — the warmth I felt will forever stick with me.",
     variant: "lg",
   },
+
   {
-    id: 24,
+  id: 24,
+  type: "image",
+  date: "13.12.2024",
+  src: bdaysupriseforme,
+  alt: "my beautiful birthday you planned out for me",
+  text:
+    "A birthday where I was shown love, appreciation and what it feels like to be spoilt by the one you loved. This birthday was the best birthday I've ever had from anyone, the amount of time you took to plan everything out and make me feel so special. I owe you the entire world for it and your kindness and care will never be something I will ever forget.",
+  variant: "lg",
+},
+
+  {
+    id: 25,
     type: "gallery",
     date: "13.12.2024",
     alt: "collage gallery",
