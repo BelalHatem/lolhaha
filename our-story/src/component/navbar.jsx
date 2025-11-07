@@ -6,18 +6,15 @@ export default function Navbar() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const handleMouseMove = (e) => {
-      setVisible(e.clientY < 100);
-    };
+    const handleMouseMove = (e) => setVisible(e.clientY < 100);
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
   return (
     <nav className={`navbar ${visible ? "navbar-visible" : ""}`}>
-      <NavLink to="/ourstory" className="nav-link">
-        Our story
-      </NavLink>
+      <NavLink to="/ourstory" className="nav-link">Our Story</NavLink>
+      <NavLink to="/diary" className="nav-link">Diary</NavLink>
     </nav>
   );
 }

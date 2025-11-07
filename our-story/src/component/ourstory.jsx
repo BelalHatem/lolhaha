@@ -324,7 +324,10 @@ export default function Ourstory() {
                 />
               ) : m.type === "gallery" ? (
                 <div className="gallery-block">
-                  <div className="gallery-grid">
+                  <div
+                    className="gallery-grid"
+                    style={{ "--cols": Math.min(4, m.gallery.length) }}
+                  >
                     {m.gallery.map((item, i) =>
                       item.type === "video" ? (
                         <video
