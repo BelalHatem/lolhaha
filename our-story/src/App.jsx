@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Navbar from "./component/navbar.jsx";
 import OurStory from "./component/ourstory.jsx";
-import Diary from "./component/Diary.jsx"; // new page
+import Diary from "./component/diary.jsx"; // new page
 
 export default function App() {
   return (
