@@ -1,18 +1,15 @@
-// /api/_auth.js
-import crypto from "crypto";
+// Simple password hashing/verification (no external deps)
+import { createHash, randomBytes, timingSafeEqual } from "crypto";
 
-const ALGO = "aes-256-gcm"; // for a small secret wrapper
-const SALT = "diary_salt_v1"; // non-secret, constant salt for scrypt
-
-export function hashPassword(password) {
-  const salt = Buffer.from(SALT);
-  const key = crypto.scryptSync(password, salt, 32);
-  // store as hex
-  return key.toString("hex");
+export function hashPassword(plain) {
+  const salt = randomBytes(16).toString("hex");
+  const hash = createHash("sha256").update(salt + plain).digest("hex");
+  return `${salt}:${hash}`;
 }
 
-export function verifyPassword(password, storedHex) {
-  const salt = Buffer.from(SALT);
-  const key = crypto.scryptSync(password, salt, 32).toString("hex");
-  return crypto.timingSafeEqual(Buffer.from(key, "hex"), Buffer.from(storedHex, "hex"));
+export function verifyPassword(plain, saltedHash) {
+  const [salt, stored] = String(saltedHash).split(":");
+  const test = createHash("sha256").update(salt + plain).digest("hex");
+  // prevent timing attacks
+  return timingSafeEqual(Buffer.from(stored), Buffer.from(test));
 }
