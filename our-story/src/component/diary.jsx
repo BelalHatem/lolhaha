@@ -17,6 +17,14 @@ const api = {
     });
     return res.json();
   },
+  async deleteProfile(name, password) {
+    const res = await fetch("/api/profiles", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, password }),
+    });
+    return res.json(); // { ok } or { error }
+  },
   async listEntries(profile, password) {
     const qs = new URLSearchParams({ password }).toString();
     const res = await fetch(`/api/diary/${encodeURIComponent(profile)}?${qs}`);
@@ -36,7 +44,15 @@ const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password, id, updates }),
     });
-    return res.json();
+    return res.json(); // { ok } or { error }
+  },
+  async deleteEntry(profile, password, id) {
+    const res = await fetch(`/api/diary/${encodeURIComponent(profile)}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password, id }),
+    });
+    return res.json(); // { ok } or { error }
   },
 };
 
@@ -60,9 +76,27 @@ export default function Diary() {
   const [entryBody, setEntryBody] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // View entry modal
+  // View / Edit entry modals
   const [showView, setShowView] = useState(false);
   const [viewing, setViewing] = useState(null);
+
+  const [showEdit, setShowEdit] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [updating, setUpdating] = useState(false);
+
+  // Delete entry confirm
+  const [showDeleteEntry, setShowDeleteEntry] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [deletingEntry, setDeletingEntry] = useState(false);
+
+  // Delete profile confirm
+  const [showDeleteProfile, setShowDeleteProfile] = useState(false);
+  const [deleteProfilePass, setDeleteProfilePass] = useState("");
+  const [deleteProfileErr, setDeleteProfileErr] = useState("");
+  const [deletingProfile, setDeletingProfile] = useState(false);
 
   // Unlock
   const [passInput, setPassInput] = useState("");
@@ -124,7 +158,6 @@ export default function Diary() {
     setUnlockErr("");
     setUnlocking(true);
     try {
-      // Ask the server; if password is wrong, you'll get { error }
       const r = await api.listEntries(active, passInput);
       if (r.error) {
         setUnlocked(false);
@@ -172,9 +205,114 @@ export default function Diary() {
     }
   }
 
+  /* ---------- open view ---------- */
   function openEntry(entry) {
     setViewing(entry);
     setShowView(true);
+  }
+
+  /* ---------- open edit from view ---------- */
+  function openEditFromView() {
+    if (!viewing) return;
+    setShowView(false);
+    setEditId(viewing.id);
+    setEditTitle(viewing.title);
+    setEditDate(viewing.date);
+    setEditBody(viewing.body || "");
+    setShowEdit(true);
+  }
+
+  /* ---------- save edit ---------- */
+  async function handleSaveEdit(e) {
+    e.preventDefault();
+    if (updating) return;
+    if (!editTitle.trim() || !editDate.trim()) return;
+
+    setUpdating(true);
+    try {
+      const resp = await api.editEntry(active, passInput, editId, {
+        title: editTitle.trim(),
+        date: editDate.trim(),
+        body: editBody,
+      });
+      if (resp.error) {
+        alert(resp.error || "Failed to update entry.");
+        return;
+      }
+      setShowEdit(false);
+      setEditId(null);
+      const refreshed = await api.listEntries(active, passInput);
+      if (!refreshed.error) setEntries(refreshed.entries || []);
+    } catch (err) {
+      alert(err.message || "Failed to update entry.");
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  /* ---------- delete entry ---------- */
+  async function confirmDeleteEntry(id) {
+    setDeleteId(id);
+    setShowView(false);
+    setShowDeleteEntry(true);
+  }
+
+  async function handleDeleteEntry() {
+    if (deletingEntry) return;
+    setDeletingEntry(true);
+    try {
+      const resp = await api.deleteEntry(active, passInput, deleteId);
+      if (resp.error) {
+        alert(resp.error || "Failed to delete entry.");
+        return;
+      }
+      setShowDeleteEntry(false);
+      setDeleteId(null);
+      const refreshed = await api.listEntries(active, passInput);
+      if (!refreshed.error) setEntries(refreshed.entries || []);
+    } catch (err) {
+      alert(err.message || "Failed to delete entry.");
+    } finally {
+      setDeletingEntry(false);
+    }
+  }
+
+  /* ---------- delete profile ---------- */
+  function openDeleteProfile() {
+    setDeleteProfilePass("");
+    setDeleteProfileErr("");
+    setShowDeleteProfile(true);
+  }
+
+  async function handleDeleteProfile(e) {
+    e.preventDefault();
+    if (deletingProfile) return;
+    setDeleteProfileErr("");
+
+    if (!active || !deleteProfilePass.trim()) {
+      setDeleteProfileErr("Enter your profile password to confirm.");
+      return;
+    }
+
+    setDeletingProfile(true);
+    try {
+      const resp = await api.deleteProfile(active, deleteProfilePass.trim());
+      if (resp.error) {
+        setDeleteProfileErr(resp.error);
+        return;
+      }
+      // remove from list & reset UI
+      const updated = (profiles || []).filter((p) => (p.name || p) !== active);
+      setProfiles(updated);
+      setActive("");
+      setUnlocked(false);
+      setEntries([]);
+      setShowDeleteProfile(false);
+    } catch (err) {
+      setDeleteProfileErr(err.message || "Failed to delete profile.");
+    } finally {
+      setDeletingProfile(false);
+    }
   }
 
   return (
@@ -183,19 +321,32 @@ export default function Diary() {
 
       <div className="diary-topbar">
         <div className="diary-tabs">
-          {profiles.map((p) => (
-            <button
-              key={p.name || p} // supports {name} or plain string
-              className={`diary-tab ${active === (p.name || p) ? "is-active" : ""}`}
-              onClick={() => setActive(p.name || p)}
-              type="button"
-            >
-              {p.name || p}
-            </button>
-          ))}
+          {profiles.map((p) => {
+            const nm = p.name || p;
+            return (
+              <button
+                key={nm}
+                className={`diary-tab ${active === nm ? "is-active" : ""}`}
+                onClick={() => setActive(nm)}
+                type="button"
+              >
+                {nm}
+              </button>
+            );
+          })}
         </div>
 
         <div className="diary-actions">
+          {active && unlocked && (
+            <button
+              className="btn btn-ghost"
+              style={{ borderColor: "rgba(220,0,0,.2)", color: "#c62828" }}
+              onClick={openDeleteProfile}
+              title="Delete this profile"
+            >
+              Delete Profile
+            </button>
+          )}
           <button className="btn" onClick={() => setShowNewProfile(true)}>
             + New Profile
           </button>
@@ -345,10 +496,130 @@ export default function Diary() {
             <div className="entry-view-date">{viewing.date}</div>
             <div className="entry-view-body">{viewing.body}</div>
             <div className="modal-actions">
+              <button className="btn" onClick={openEditFromView}>
+                Edit
+              </button>
+              <button
+                className="btn btn-ghost"
+                style={{ borderColor: "rgba(220,0,0,.2)", color: "#c62828" }}
+                onClick={() => confirmDeleteEntry(viewing.id)}
+              >
+                Delete
+              </button>
               <button className="btn btn-ghost" onClick={() => setShowView(false)}>
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Entry Modal */}
+      {showEdit && (
+        <div className="modal-backdrop" onClick={() => setShowEdit(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Edit Entry</h3>
+            <form onSubmit={handleSaveEdit}>
+              <input
+                className="input"
+                placeholder="Title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+              />
+              <input
+                className="input"
+                placeholder="Date (e.g. 2025-11-08)"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+              />
+              <textarea
+                className="textarea"
+                rows={8}
+                placeholder="Write about your day…"
+                value={editBody}
+                onChange={(e) => setEditBody(e.target.value)}
+              />
+              <div className="modal-actions">
+                <button className="btn" type="submit" disabled={updating}>
+                  {updating ? "Saving…" : "Save"}
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  type="button"
+                  onClick={() => setShowEdit(false)}
+                  disabled={updating}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Entry Confirm */}
+      {showDeleteEntry && (
+        <div className="modal-backdrop" onClick={() => setShowDeleteEntry(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Delete Entry?</h3>
+            <p>This action can’t be undone.</p>
+            <div className="modal-actions">
+              <button
+                className="btn btn-ghost"
+                onClick={() => setShowDeleteEntry(false)}
+                disabled={deletingEntry}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn"
+                style={{ background: "#c62828" }}
+                onClick={handleDeleteEntry}
+                disabled={deletingEntry}
+              >
+                {deletingEntry ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Profile Confirm */}
+      {showDeleteProfile && (
+        <div className="modal-backdrop" onClick={() => setShowDeleteProfile(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Delete Profile “{active}”?</h3>
+            <p>This will remove the profile and all of its diary entries.</p>
+            <form onSubmit={handleDeleteProfile}>
+              <input
+                className="input"
+                type="password"
+                placeholder="Enter profile password to confirm"
+                value={deleteProfilePass}
+                onChange={(e) => setDeleteProfilePass(e.target.value)}
+              />
+              {!!deleteProfileErr && (
+                <div style={{ color: "#d93025", marginTop: 8 }}>{deleteProfileErr}</div>
+              )}
+              <div className="modal-actions">
+                <button
+                  className="btn btn-ghost"
+                  type="button"
+                  onClick={() => setShowDeleteProfile(false)}
+                  disabled={deletingProfile}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn"
+                  style={{ background: "#c62828" }}
+                  type="submit"
+                  disabled={deletingProfile}
+                >
+                  {deletingProfile ? "Deleting…" : "Delete Profile"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
