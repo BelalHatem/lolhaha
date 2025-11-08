@@ -3,8 +3,8 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "routes": [
-    { "src": "^/api/(.*)$", "dest": "/api/$1" },          // pass API through
-    { "src": "^/(?:.*\\..*)$", "dest": "/$1" },           // serve real files (assets)
-    { "src": "^(?!/api)(?!/.*\\..*$).*", "dest": "/index.html" } // SPA fallback
+    { "src": "^/api/(.*)$", "dest": "/api/$1" },          
+    { "src": "^/(?:.*\\..*)$", "dest": "/$1" },           
+    { "src": "^(?!/api)(?!/.*\\..*$).*", "dest": "/index.html" } 
   ]
 }
