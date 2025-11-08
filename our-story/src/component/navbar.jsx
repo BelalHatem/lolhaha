@@ -1,20 +1,18 @@
-import { useState, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import "../styling/navbar.css";
 
 export default function Navbar() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const handleMouseMove = (e) => setVisible(e.clientY < 100);
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
+  const { pathname } = useLocation();
   return (
-    <nav className={`navbar ${visible ? "navbar-visible" : ""}`}>
-      <NavLink to="/ourstory" className="nav-link">Our Story</NavLink>
-      <NavLink to="/diary" className="nav-link">Diary</NavLink>
-    </nav>
+    <header className="navbar">
+      <nav className="nav-inner">
+        <Link className={`nav-link ${pathname.includes("/ourstory") || pathname === "/" ? "is-active" : ""}`} to="/ourstory">
+          Our Story
+        </Link>
+        <Link className={`nav-link ${pathname.includes("/diary") ? "is-active" : ""}`} to="/diary">
+          Diary
+        </Link>
+      </nav>
+    </header>
   );
 }
