@@ -3,8 +3,15 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "cleanUrls": true,
+
+  "functions": {
+    "api/**/*.{js,ts}": {
+      "runtime": "nodejs20.x"
+    }
+  },
+
   "rewrites": [
-    { "source": "/api/:match*", "destination": "/api/:match*" },
+    { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
