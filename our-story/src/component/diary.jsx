@@ -8,142 +8,171 @@ export default function Diary() {
   const [unlocked, setUnlocked] = useState(false);
   const [entries, setEntries] = useState([]);
 
-  // modals
+  // Create Profile modal
   const [showNewProfile, setShowNewProfile] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPass, setNewPass] = useState("");
   const [createErr, setCreateErr] = useState("");
+  const [creating, setCreating] = useState(false);
 
+  // New Entry modal
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [entryTitle, setEntryTitle] = useState("");
   const [entryDate, setEntryDate] = useState("");
   const [entryBody, setEntryBody] = useState("");
+  const [savingEntry, setSavingEntry] = useState(false);
 
+  // View Entry modal
   const [showView, setShowView] = useState(false);
   const [viewing, setViewing] = useState(null);
 
+  // Unlock strip
   const [passInput, setPassInput] = useState("");
   const [unlockErr, setUnlockErr] = useState("");
+  const [unlocking, setUnlocking] = useState(false);
 
-  /** ---------- API CONNECTION ---------- **/
-const api = {
-  async listProfiles() {
-    const res = await fetch("/api/profiles");
-    const data = await res.json();
-    return data.profiles || [];
-  },
+  /** ---------- API ---------- **/
+  const api = {
+    async listProfiles() {
+      const res = await fetch("/api/profiles");
+      if (!res.ok) throw new Error("Failed to list profiles");
+      const data = await res.json();
+      return data.profiles || [];
+    },
 
-  async createProfile(name, password) {
-    const res = await fetch("/api/profiles", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, password }),
-    });
-    return res.json();
-  },
+    async createProfile(name, password) {
+      const res = await fetch("/api/profiles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, ...data };
+    },
 
-  async listEntries(profile, password) {
-    const res = await fetch(`/api/diary/${encodeURIComponent(profile)}?password=${encodeURIComponent(password)}`);
-    return res.json();
-  },
+    async listEntries(profile, password) {
+      const url = password
+        ? `/api/diary/${encodeURIComponent(profile)}?password=${encodeURIComponent(
+            password
+          )}`
+        : `/api/diary/${encodeURIComponent(profile)}`;
+      const res = await fetch(url);
+      const data = await res.json().catch(() => []);
+      return data || [];
+    },
 
-  async addEntry(profile, password, entry) {
-    const res = await fetch(`/api/diary/${encodeURIComponent(profile)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password, ...entry }),
-    });
-    return res.json();
-  },
+    async addEntry(profile, password, entry) {
+      const res = await fetch(`/api/diary/${encodeURIComponent(profile)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password, ...entry }),
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, ...data };
+    },
+  };
 
-  async editEntry(profile, password, id, updates) {
-    const res = await fetch(`/api/diary/${encodeURIComponent(profile)}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password, id, updates }),
-    });
-    return res.json();
-  },
-};
-
-
-  /** ---------- LOAD PROFILES ---------- **/
+  /** ---------- Load Profiles on mount ---------- **/
   useEffect(() => {
     api.listProfiles().then(setProfiles).catch(console.error);
   }, []);
 
-  /** ---------- LOAD ENTRIES ON PROFILE CHANGE ---------- **/
+  /** ---------- Reset unlock when switching profiles ---------- **/
   useEffect(() => {
     if (!active) return;
     setUnlocked(false);
     setPassInput("");
     setUnlockErr("");
-    api.listEntries(active).then(setEntries).catch(console.error);
+    setEntries([]); // entries require unlock
   }, [active]);
 
-  /** ---------- CREATE PROFILE ---------- **/
+  /** ---------- Create Profile ---------- **/
   async function handleCreateProfile(e) {
     e.preventDefault();
     setCreateErr("");
-    const name = newName.trim();
-    const pass = newPass.trim();
-
-    if (!name || !pass) {
-      setCreateErr("Please fill both fields.");
+    if (!newName.trim() || !newPass.trim()) {
+      setCreateErr("Please enter a profile name and password.");
       return;
     }
-
-    const result = await api.createProfile(name, pass);
-    if (result.error) {
-      setCreateErr(result.error);
-      return;
+    try {
+      setCreating(true);
+      const result = await api.createProfile(newName.trim(), newPass);
+      if (!result.ok) {
+        setCreateErr(result.error || "Failed to create profile.");
+        return;
+      }
+      // Refresh and activate
+      const all = await api.listProfiles();
+      setProfiles(all);
+      setActive(newName.trim());
+      setUnlocked(false);
+      // reset modal
+      setShowNewProfile(false);
+      setNewName("");
+      setNewPass("");
+    } catch (err) {
+      setCreateErr(err.message || "Network error.");
+    } finally {
+      setCreating(false);
     }
-
-    setShowNewProfile(false);
-    setNewName("");
-    setNewPass("");
-    const updated = await api.listProfiles();
-    setProfiles(updated);
-    setActive(name);
-    setUnlocked(false);
   }
 
-  /** ---------- UNLOCK PROFILE ---------- **/
+  /** ---------- Unlock Profile ---------- **/
   async function handleUnlock(e) {
     e.preventDefault();
     setUnlockErr("");
-    const prof = profiles.find((p) => p.name === active);
-    if (!prof) return;
-    if (passInput === prof.password) {
-      setUnlocked(true);
-    } else {
-      setUnlockErr("Incorrect password.");
+    if (!active || !passInput) {
+      setUnlockErr("Enter a password.");
+      return;
+    }
+    try {
+      setUnlocking(true);
+      // attempt to fetch entries with password
+      const list = await api.listEntries(active, passInput);
+      // If backend rejects, it should be an object with error; if success it's array
+      if (Array.isArray(list)) {
+        setEntries(list);
+        setUnlocked(true);
+      } else if (list && list.error) {
+        setUnlockErr(list.error || "Incorrect password.");
+        setUnlocked(false);
+      } else {
+        // fallback: if not array, consider error
+        setUnlockErr("Incorrect password.");
+        setUnlocked(false);
+      }
+    } catch (err) {
+      setUnlockErr(err.message || "Failed to unlock.");
+      setUnlocked(false);
+    } finally {
+      setUnlocking(false);
     }
   }
 
-  /** ---------- ADD ENTRY ---------- **/
+  /** ---------- Add Entry ---------- **/
   async function handleAddEntry(e) {
     e.preventDefault();
-    if (!entryTitle || !entryDate || !entryBody) return;
-
-    const entry = {
-      title: entryTitle,
-      date: entryDate,
-      body: entryBody,
-    };
-
-    const res = await api.addEntry(active, passInput, entry);
-    if (res.error) {
-      alert(res.error);
-      return;
+    if (!entryTitle.trim() || !entryDate.trim() || !entryBody.trim()) return;
+    try {
+      setSavingEntry(true);
+      const res = await api.addEntry(active, passInput, {
+        title: entryTitle.trim(),
+        date: entryDate.trim(),
+        body: entryBody,
+      });
+      if (!res.ok) {
+        alert(res.error || "Failed to save entry.");
+        return;
+      }
+      setShowNewEntry(false);
+      setEntryTitle("");
+      setEntryDate("");
+      setEntryBody("");
+      const updated = await api.listEntries(active, passInput);
+      setEntries(Array.isArray(updated) ? updated : []);
+    } finally {
+      setSavingEntry(false);
     }
-
-    setShowNewEntry(false);
-    setEntryTitle("");
-    setEntryDate("");
-    setEntryBody("");
-    const updated = await api.listEntries(active);
-    setEntries(updated);
   }
 
   function openEntry(entry) {
@@ -170,11 +199,12 @@ const api = {
         </div>
 
         <div className="diary-actions">
-          <button className="btn" onClick={() => setShowNewProfile(true)}>
+          <button className="btn" type="button" onClick={() => setShowNewProfile(true)}>
             + New Profile
           </button>
           <button
             className="btn"
+            type="button"
             onClick={() => setShowNewEntry(true)}
             disabled={!active || !unlocked}
           >
@@ -206,8 +236,8 @@ const api = {
               )}
             </form>
           </div>
-          <button className="btn" onClick={handleUnlock}>
-            Unlock
+          <button className="btn" type="button" onClick={handleUnlock} disabled={unlocking || !passInput}>
+            {unlocking ? "Unlocking..." : "Unlock"}
           </button>
         </div>
       )}
@@ -215,7 +245,11 @@ const api = {
       {active && unlocked && (
         <div className="diary-grid">
           {entries.map((en) => (
-            <div key={en.id || en.title} className="entry-card" onClick={() => openEntry(en)}>
+            <div
+              key={en.id || `${en.title}-${en.date}`}
+              className="entry-card"
+              onClick={() => openEntry(en)}
+            >
               <div className="entry-title">{en.title}</div>
               <div className="entry-date">{en.date}</div>
             </div>
@@ -226,7 +260,7 @@ const api = {
         </div>
       )}
 
-      {/* New Profile Modal */}
+      {/* Create Profile Modal */}
       {showNewProfile && (
         <div className="modal-backdrop" onClick={() => setShowNewProfile(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -237,6 +271,7 @@ const api = {
                 placeholder="Profile name"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
+                autoFocus
               />
               <input
                 className="input"
@@ -249,13 +284,23 @@ const api = {
                 <div style={{ color: "#d93025", marginTop: 8 }}>{createErr}</div>
               )}
               <div className="modal-actions">
-                <button className="btn" type="submit">
-                  Create
+                <button
+                  className="btn"
+                  type="submit"
+                  disabled={creating || !newName.trim() || !newPass.trim()}
+                >
+                  {creating ? "Creating..." : "Create"}
                 </button>
                 <button
                   className="btn btn-ghost"
                   type="button"
-                  onClick={() => setShowNewProfile(false)}
+                  onClick={() => {
+                    setShowNewProfile(false);
+                    setNewName("");
+                    setNewPass("");
+                    setCreateErr("");
+                  }}
+                  disabled={creating}
                 >
                   Cancel
                 </button>
@@ -276,6 +321,7 @@ const api = {
                 placeholder="Title"
                 value={entryTitle}
                 onChange={(e) => setEntryTitle(e.target.value)}
+                autoFocus
               />
               <input
                 className="input"
@@ -291,13 +337,19 @@ const api = {
                 onChange={(e) => setEntryBody(e.target.value)}
               />
               <div className="modal-actions">
-                <button className="btn" type="submit">
-                  Save
+                <button className="btn" type="submit" disabled={savingEntry}>
+                  {savingEntry ? "Saving..." : "Save"}
                 </button>
                 <button
                   className="btn btn-ghost"
                   type="button"
-                  onClick={() => setShowNewEntry(false)}
+                  onClick={() => {
+                    setShowNewEntry(false);
+                    setEntryTitle("");
+                    setEntryDate("");
+                    setEntryBody("");
+                  }}
+                  disabled={savingEntry}
                 >
                   Cancel
                 </button>
@@ -315,7 +367,7 @@ const api = {
             <div className="entry-view-date">{viewing.date}</div>
             <div className="entry-view-body">{viewing.body}</div>
             <div className="modal-actions">
-              <button className="btn btn-ghost" onClick={() => setShowView(false)}>
+              <button className="btn btn-ghost" type="button" onClick={() => setShowView(false)}>
                 Close
               </button>
             </div>
