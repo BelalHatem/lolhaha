@@ -26,32 +26,46 @@ export default function Diary() {
   const [unlockErr, setUnlockErr] = useState("");
 
   /** ---------- API CONNECTION ---------- **/
-  const api = {
-    async listProfiles() {
-      const r = await fetch("/api/profiles");
-      return r.json();
-    },
-    async createProfile(name, password) {
-      const r = await fetch("/api/profiles", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, password }),
-      });
-      return r.json();
-    },
-    async listEntries(profile) {
-      const r = await fetch(`/api/diary/${encodeURIComponent(profile)}`);
-      return r.json();
-    },
-    async addEntry(profile, password, entry) {
-      const r = await fetch(`/api/diary/${encodeURIComponent(profile)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password, entry }),
-      });
-      return r.json();
-    },
-  };
+const api = {
+  async listProfiles() {
+    const res = await fetch("/api/profiles");
+    const data = await res.json();
+    return data.profiles || [];
+  },
+
+  async createProfile(name, password) {
+    const res = await fetch("/api/profiles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, password }),
+    });
+    return res.json();
+  },
+
+  async listEntries(profile, password) {
+    const res = await fetch(`/api/diary/${encodeURIComponent(profile)}?password=${encodeURIComponent(password)}`);
+    return res.json();
+  },
+
+  async addEntry(profile, password, entry) {
+    const res = await fetch(`/api/diary/${encodeURIComponent(profile)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password, ...entry }),
+    });
+    return res.json();
+  },
+
+  async editEntry(profile, password, id, updates) {
+    const res = await fetch(`/api/diary/${encodeURIComponent(profile)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password, id, updates }),
+    });
+    return res.json();
+  },
+};
+
 
   /** ---------- LOAD PROFILES ---------- **/
   useEffect(() => {
