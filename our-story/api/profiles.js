@@ -1,42 +1,59 @@
-// api/profiles.js
+// /api/profiles.js
 import { getRedisClient } from "./_redis.js";
 
 export default async function handler(req, res) {
-  const redis = await getRedisClient();
+  const client = await getRedisClient();
+  const key = "profiles";
 
   if (req.method === "GET") {
-    try {
-      const keys = await redis.keys("profile:*");
-      const profiles = [];
-      for (const k of keys) {
-        const data = await redis.hGetAll(k);
-        profiles.push({ name: data.name });
-      }
-      res.status(200).json({ profiles });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
+    // list all profiles (names only)
+    const data = (await client.get(key)) || "[]";
+    const profiles = JSON.parse(data);
+    return res.status(200).json({ profiles });
   }
 
-  else if (req.method === "POST") {
-    try {
-      const { name, password } = req.body;
-      if (!name || !password)
-        return res.status(400).json({ error: "Missing fields" });
+  if (req.method === "POST") {
+    // create new profile
+    const { name, password } = req.body;
+    if (!name || !password)
+      return res.status(400).json({ error: "Missing name or password" });
 
-      const key = `profile:${name}`;
-      const exists = await redis.exists(key);
-      if (exists)
-        return res.status(400).json({ error: "Profile already exists" });
+    const data = (await client.get(key)) || "[]";
+    const profiles = JSON.parse(data);
 
-      await redis.hSet(key, { name, password });
-      res.status(200).json({ ok: true });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
+    if (profiles.find((p) => p.name === name))
+      return res.status(400).json({ error: "Profile already exists" });
+
+    profiles.push({ name, password });
+    await client.set(key, JSON.stringify(profiles));
+    return res.status(200).json({ ok: true });
   }
 
-  else {
-    res.status(405).json({ error: "Method not allowed" });
+  if (req.method === "DELETE") {
+    // delete existing profile
+    const { name, password } = req.body;
+    if (!name || !password)
+      return res.status(400).json({ error: "Missing name or password" });
+
+    const data = (await client.get(key)) || "[]";
+    let profiles = JSON.parse(data);
+
+    const match = profiles.find((p) => p.name === name);
+    if (!match)
+      return res.status(404).json({ error: "Profile not found" });
+    if (match.password !== password)
+      return res.status(403).json({ error: "Incorrect password" });
+
+    // remove from list
+    profiles = profiles.filter((p) => p.name !== name);
+    await client.set(key, JSON.stringify(profiles));
+
+    // also remove diary entries for that profile
+    await client.del(`diary:${name}`);
+
+    return res.status(200).json({ ok: true });
   }
+
+  // fallback for unsupported methods
+  return res.status(405).json({ error: "Method not allowed" });
 }
