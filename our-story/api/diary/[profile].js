@@ -1,88 +1,102 @@
-import { getRedis } from "../_redis.js";
-import { verifyPassword } from "../_auth.js";
+// api/diary/[profile].js
+import { getRedisClient } from "../_redis.js";
 
 export default async function handler(req, res) {
-  try {
-    const redis = await getRedis();
-    const { profile } = req.query || {};
-    if (!profile) return res.status(400).json({ ok: false, error: "profile required" });
+  const redis = await getRedisClient();
+  const { profile } = req.query;
 
-    const pKey = `profile:${encodeURIComponent(profile)}`;
-    const pdata = await redis.hGetAll(pKey);
-    if (!pdata?.phash) return res.status(404).json({ ok: false, error: "profile not found" });
+  // helpers
+  async function checkPassword(pw) {
+    const key = `profile:${profile}`;
+    const exists = await redis.exists(key);
+    if (!exists) return { ok: false, status: 404, msg: "Profile not found" };
+    const stored = await redis.hGet(key, "password");
+    if (stored !== pw) return { ok: false, status: 401, msg: "Invalid password" };
+    return { ok: true };
+  }
 
-    // password is required for any action
-    const password = (req.method === "GET") ? (req.query?.password || req.headers["x-password"]) : (req.body?.password);
-    if (!password) return res.status(401).json({ ok: false, error: "password required" });
-    if (!verifyPassword(password, pdata.phash)) return res.status(401).json({ ok: false, error: "bad password" });
+  // GET /api/diary/[profile]?password=...
+  if (req.method === "GET") {
+    try {
+      const { password } = req.query;
+      const ok = await checkPassword(password);
+      if (!ok.ok) return res.status(ok.status).json({ error: ok.msg });
 
-    const idsKey = `diary:${encodeURIComponent(profile)}:ids`;
+      const listKey = `entries:${profile}`;
+      // latest first
+      const ids = await redis.zRange(listKey, -1000, -1, { REV: true });
 
-    if (req.method === "GET") {
-      // list entries, newest first
-      const ids = await redis.sMembers(idsKey);
-      if (!ids?.length) return res.status(200).json({ ok: true, entries: [] });
-
-      const pipeline = redis.multi();
-      ids.forEach((id) => pipeline.hGetAll(`diary:${encodeURIComponent(profile)}:${id}`));
-      const all = await pipeline.exec();
-      // sort by createdAt desc
-      const entries = all
-        .map(([_, obj]) => obj)
-        .filter(Boolean)
-        .sort((a, b) => Number(b.createdAt) - Number(a.createdAt));
-
-      res.status(200).json({ ok: true, entries });
-      return;
+      const entries = [];
+      for (const id of ids) {
+        const e = await redis.hGetAll(`entry:${profile}:${id}`);
+        if (e && e.id) entries.push(e);
+      }
+      return res.status(200).json({ entries });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
     }
+  }
 
-    if (req.method === "POST") {
-      // add entry: { title, date, body }
-      const { title, date, body } = req.body || {};
-      if (!title || !date || !body) return res.status(400).json({ ok: false, error: "title, date, body required" });
+  // POST /api/diary/[profile]
+  // body: { password, title, date, body }
+  if (req.method === "POST") {
+    try {
+      const { password, title, date, body } = req.body || {};
+      if (!password || !title || !date || !body) {
+        return res.status(400).json({ error: "Missing fields" });
+      }
+      const ok = await checkPassword(password);
+      if (!ok.ok) return res.status(ok.status).json({ error: ok.msg });
 
-      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-      const eKey = `diary:${encodeURIComponent(profile)}:${id}`;
+      const id = String(await redis.incr(`counter:${profile}`));
+      const entryKey = `entry:${profile}:${id}`;
+      const listKey = `entries:${profile}`;
 
-      await redis.hSet(eKey, {
+      const entry = {
         id,
-        profile,
         title,
         date,
         body,
-        createdAt: Date.now().toString(),
-        updatedAt: Date.now().toString(),
-      });
-      await redis.sAdd(idsKey, id);
-
-      res.status(201).json({ ok: true, id });
-      return;
-    }
-
-    if (req.method === "PUT") {
-      // edit entry: { id, updates: {title?, date?, body?} }
-      const { id, updates } = req.body || {};
-      if (!id || !updates) return res.status(400).json({ ok: false, error: "id and updates required" });
-
-      const eKey = `diary:${encodeURIComponent(profile)}:${id}`;
-      const exists = await redis.exists(eKey);
-      if (!exists) return res.status(404).json({ ok: false, error: "entry not found" });
-
-      const patch = {
-        ...(updates.title ? { title: updates.title } : {}),
-        ...(updates.date ? { date: updates.date } : {}),
-        ...(updates.body ? { body: updates.body } : {}),
-        updatedAt: Date.now().toString(),
+        createdAt: String(Date.now()),
       };
-      await redis.hSet(eKey, patch);
 
-      res.status(200).json({ ok: true });
-      return;
+      await redis.hSet(entryKey, entry);
+      await redis.zAdd(listKey, [{ score: Date.now(), value: id }]);
+
+      return res.status(200).json({ ok: true, entry });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
     }
-
-    res.status(405).json({ ok: false, error: "method not allowed" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ ok: false, error: "server error" });
   }
+
+  // PUT /api/diary/[profile]
+  // body: { password, id, updates: { title?, date?, body? } }
+  if (req.method === "PUT") {
+    try {
+      const { password, id, updates } = req.body || {};
+      if (!password || !id || !updates) {
+        return res.status(400).json({ error: "Missing fields" });
+      }
+      const ok = await checkPassword(password);
+      if (!ok.ok) return res.status(ok.status).json({ error: ok.msg });
+
+      const entryKey = `entry:${profile}:${id}`;
+      const exists = await redis.exists(entryKey);
+      if (!exists) return res.status(404).json({ error: "Entry not found" });
+
+      // Only update allowed fields
+      const patch = {};
+      ["title", "date", "body"].forEach((k) => {
+        if (updates[k] != null) patch[k] = updates[k];
+      });
+      if (Object.keys(patch).length) await redis.hSet(entryKey, patch);
+
+      const updated = await redis.hGetAll(entryKey);
+      return res.status(200).json({ ok: true, entry: updated });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  return res.status(405).json({ error: "Method not allowed" });
 }

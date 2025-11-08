@@ -2,176 +2,200 @@
 import { useEffect, useState } from "react";
 import "../styling/diary.css";
 
+/** ---------------- API helpers ---------------- **/
+const api = {
+  async listProfiles() {
+    const res = await fetch("/api/profiles");
+    const data = await res.json();
+    // backend returns { profiles: [...] }
+    return data.profiles || [];
+  },
+
+  async createProfile(name, password) {
+    const res = await fetch("/api/profiles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, password }),
+    });
+    return res.json(); // { ok: true } or { error: "..." }
+  },
+
+  // NOTE: password is required for reading entries
+  async listEntries(profile, password) {
+    const qs = new URLSearchParams({ password }).toString();
+    const res = await fetch(`/api/diary/${encodeURIComponent(profile)}?${qs}`);
+    return res.json(); // { entries: [...] } or { error: "..." }
+  },
+
+  async addEntry(profile, password, entry) {
+    const res = await fetch(`/api/diary/${encodeURIComponent(profile)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password, ...entry }),
+    });
+    return res.json(); // { ok: true } or { error: "..." }
+  },
+
+  async editEntry(profile, password, id, updates) {
+    const res = await fetch(`/api/diary/${encodeURIComponent(profile)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password, id, updates }),
+    });
+    return res.json(); // { ok: true } or { error: "..." }
+  },
+};
+
 export default function Diary() {
+  /** ---------------- state ---------------- **/
   const [profiles, setProfiles] = useState([]);
   const [active, setActive] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [entries, setEntries] = useState([]);
 
-  // Create Profile modal
+  // create profile modal
   const [showNewProfile, setShowNewProfile] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPass, setNewPass] = useState("");
   const [createErr, setCreateErr] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // New Entry modal
+  // new entry modal
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [entryTitle, setEntryTitle] = useState("");
   const [entryDate, setEntryDate] = useState("");
   const [entryBody, setEntryBody] = useState("");
-  const [savingEntry, setSavingEntry] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  // View Entry modal
+  // view entry modal
   const [showView, setShowView] = useState(false);
   const [viewing, setViewing] = useState(null);
 
-  // Unlock strip
+  // unlock bar
   const [passInput, setPassInput] = useState("");
   const [unlockErr, setUnlockErr] = useState("");
   const [unlocking, setUnlocking] = useState(false);
 
-  /** ---------- API ---------- **/
-  const api = {
-    async listProfiles() {
-      const res = await fetch("/api/profiles");
-      if (!res.ok) throw new Error("Failed to list profiles");
-      const data = await res.json();
-      return data.profiles || [];
-    },
-
-    async createProfile(name, password) {
-      const res = await fetch("/api/profiles", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, password }),
-      });
-      const data = await res.json().catch(() => ({}));
-      return { ok: res.ok, ...data };
-    },
-
-    async listEntries(profile, password) {
-      const url = password
-        ? `/api/diary/${encodeURIComponent(profile)}?password=${encodeURIComponent(
-            password
-          )}`
-        : `/api/diary/${encodeURIComponent(profile)}`;
-      const res = await fetch(url);
-      const data = await res.json().catch(() => []);
-      return data || [];
-    },
-
-    async addEntry(profile, password, entry) {
-      const res = await fetch(`/api/diary/${encodeURIComponent(profile)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password, ...entry }),
-      });
-      const data = await res.json().catch(() => ({}));
-      return { ok: res.ok, ...data };
-    },
-  };
-
-  /** ---------- Load Profiles on mount ---------- **/
+  /** ---------------- effects ---------------- **/
   useEffect(() => {
-    api.listProfiles().then(setProfiles).catch(console.error);
+    api
+      .listProfiles()
+      .then((p) => setProfiles(p))
+      .catch((e) => console.error("listProfiles failed:", e));
   }, []);
 
-  /** ---------- Reset unlock when switching profiles ---------- **/
+  // when switching profile, clear unlock state and entries
   useEffect(() => {
     if (!active) return;
     setUnlocked(false);
     setPassInput("");
     setUnlockErr("");
-    setEntries([]); // entries require unlock
+    setEntries([]);
   }, [active]);
 
-  /** ---------- Create Profile ---------- **/
+  /** ---------------- handlers ---------------- **/
   async function handleCreateProfile(e) {
     e.preventDefault();
+    if (creating) return;
+
     setCreateErr("");
-    if (!newName.trim() || !newPass.trim()) {
-      setCreateErr("Please enter a profile name and password.");
+    const name = newName.trim();
+    const pass = newPass.trim();
+
+    if (!name || !pass) {
+      setCreateErr("Please fill both fields.");
       return;
     }
+
+    setCreating(true);
     try {
-      setCreating(true);
-      const result = await api.createProfile(newName.trim(), newPass);
-      if (!result.ok) {
-        setCreateErr(result.error || "Failed to create profile.");
+      const result = await api.createProfile(name, pass);
+      if (result.error) {
+        setCreateErr(result.error);
         return;
       }
-      // Refresh and activate
-      const all = await api.listProfiles();
-      setProfiles(all);
-      setActive(newName.trim());
+
+      // refresh list, focus new profile
+      const updated = await api.listProfiles();
+      setProfiles(updated);
+      setActive(name);
       setUnlocked(false);
-      // reset modal
+
+      // close & reset modal
       setShowNewProfile(false);
       setNewName("");
       setNewPass("");
     } catch (err) {
-      setCreateErr(err.message || "Network error.");
+      setCreateErr(err.message || "Failed to create profile.");
     } finally {
       setCreating(false);
     }
   }
 
-  /** ---------- Unlock Profile ---------- **/
   async function handleUnlock(e) {
     e.preventDefault();
+    if (unlocking) return;
+
     setUnlockErr("");
-    if (!active || !passInput) {
-      setUnlockErr("Enter a password.");
-      return;
-    }
+    setUnlocking(true);
     try {
-      setUnlocking(true);
-      // attempt to fetch entries with password
-      const list = await api.listEntries(active, passInput);
-      // If backend rejects, it should be an object with error; if success it's array
-      if (Array.isArray(list)) {
-        setEntries(list);
-        setUnlocked(true);
-      } else if (list && list.error) {
-        setUnlockErr(list.error || "Incorrect password.");
-        setUnlocked(false);
-      } else {
-        // fallback: if not array, consider error
-        setUnlockErr("Incorrect password.");
-        setUnlocked(false);
+      const prof = profiles.find((p) => p.name === active);
+      if (!prof) {
+        setUnlockErr("Profile not found.");
+        return;
       }
+      if (passInput !== prof.password) {
+        setUnlockErr("Incorrect password.");
+        return;
+      }
+
+      // password OK – mark unlocked and fetch entries using the password
+      setUnlocked(true);
+      const r = await api.listEntries(active, passInput);
+      if (r.error) {
+        setUnlockErr(r.error);
+        setUnlocked(false);
+        return;
+      }
+      setEntries(r.entries || []);
     } catch (err) {
       setUnlockErr(err.message || "Failed to unlock.");
-      setUnlocked(false);
     } finally {
       setUnlocking(false);
     }
   }
 
-  /** ---------- Add Entry ---------- **/
   async function handleAddEntry(e) {
     e.preventDefault();
+    if (saving) return;
+
     if (!entryTitle.trim() || !entryDate.trim() || !entryBody.trim()) return;
+
+    setSaving(true);
     try {
-      setSavingEntry(true);
-      const res = await api.addEntry(active, passInput, {
+      const resp = await api.addEntry(active, passInput, {
         title: entryTitle.trim(),
         date: entryDate.trim(),
         body: entryBody,
       });
-      if (!res.ok) {
-        alert(res.error || "Failed to save entry.");
+
+      if (resp.error) {
+        alert(resp.error || "Failed to save entry.");
         return;
       }
+
+      // close modal and refresh list using the same password
       setShowNewEntry(false);
       setEntryTitle("");
       setEntryDate("");
       setEntryBody("");
-      const updated = await api.listEntries(active, passInput);
-      setEntries(Array.isArray(updated) ? updated : []);
+
+      const refreshed = await api.listEntries(active, passInput);
+      if (!refreshed.error) setEntries(refreshed.entries || []);
+    } catch (err) {
+      alert(err.message || "Failed to save entry.");
     } finally {
-      setSavingEntry(false);
+      setSaving(false);
     }
   }
 
@@ -180,6 +204,7 @@ export default function Diary() {
     setShowView(true);
   }
 
+  /** ---------------- render ---------------- **/
   return (
     <div className="diary-page">
       <h1 className="diary-title">Diary</h1>
@@ -199,12 +224,11 @@ export default function Diary() {
         </div>
 
         <div className="diary-actions">
-          <button className="btn" type="button" onClick={() => setShowNewProfile(true)}>
+          <button className="btn" onClick={() => setShowNewProfile(true)}>
             + New Profile
           </button>
           <button
             className="btn"
-            type="button"
             onClick={() => setShowNewEntry(true)}
             disabled={!active || !unlocked}
           >
@@ -236,8 +260,8 @@ export default function Diary() {
               )}
             </form>
           </div>
-          <button className="btn" type="button" onClick={handleUnlock} disabled={unlocking || !passInput}>
-            {unlocking ? "Unlocking..." : "Unlock"}
+          <button className="btn" onClick={handleUnlock} disabled={unlocking}>
+            {unlocking ? "Unlocking…" : "Unlock"}
           </button>
         </div>
       )}
@@ -260,7 +284,7 @@ export default function Diary() {
         </div>
       )}
 
-      {/* Create Profile Modal */}
+      {/* ---------- New Profile Modal ---------- */}
       {showNewProfile && (
         <div className="modal-backdrop" onClick={() => setShowNewProfile(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -271,7 +295,6 @@ export default function Diary() {
                 placeholder="Profile name"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                autoFocus
               />
               <input
                 className="input"
@@ -284,22 +307,13 @@ export default function Diary() {
                 <div style={{ color: "#d93025", marginTop: 8 }}>{createErr}</div>
               )}
               <div className="modal-actions">
-                <button
-                  className="btn"
-                  type="submit"
-                  disabled={creating || !newName.trim() || !newPass.trim()}
-                >
-                  {creating ? "Creating..." : "Create"}
+                <button className="btn" type="submit" disabled={creating}>
+                  {creating ? "Creating…" : "Create"}
                 </button>
                 <button
                   className="btn btn-ghost"
                   type="button"
-                  onClick={() => {
-                    setShowNewProfile(false);
-                    setNewName("");
-                    setNewPass("");
-                    setCreateErr("");
-                  }}
+                  onClick={() => setShowNewProfile(false)}
                   disabled={creating}
                 >
                   Cancel
@@ -310,7 +324,7 @@ export default function Diary() {
         </div>
       )}
 
-      {/* New Entry Modal */}
+      {/* ---------- New Entry Modal ---------- */}
       {showNewEntry && (
         <div className="modal-backdrop" onClick={() => setShowNewEntry(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -321,7 +335,6 @@ export default function Diary() {
                 placeholder="Title"
                 value={entryTitle}
                 onChange={(e) => setEntryTitle(e.target.value)}
-                autoFocus
               />
               <input
                 className="input"
@@ -337,19 +350,14 @@ export default function Diary() {
                 onChange={(e) => setEntryBody(e.target.value)}
               />
               <div className="modal-actions">
-                <button className="btn" type="submit" disabled={savingEntry}>
-                  {savingEntry ? "Saving..." : "Save"}
+                <button className="btn" type="submit" disabled={saving}>
+                  {saving ? "Saving…" : "Save"}
                 </button>
                 <button
                   className="btn btn-ghost"
                   type="button"
-                  onClick={() => {
-                    setShowNewEntry(false);
-                    setEntryTitle("");
-                    setEntryDate("");
-                    setEntryBody("");
-                  }}
-                  disabled={savingEntry}
+                  onClick={() => setShowNewEntry(false)}
+                  disabled={saving}
                 >
                   Cancel
                 </button>
@@ -359,7 +367,7 @@ export default function Diary() {
         </div>
       )}
 
-      {/* View Entry Modal */}
+      {/* ---------- View Entry Modal ---------- */}
       {showView && viewing && (
         <div className="modal-backdrop" onClick={() => setShowView(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -367,7 +375,7 @@ export default function Diary() {
             <div className="entry-view-date">{viewing.date}</div>
             <div className="entry-view-body">{viewing.body}</div>
             <div className="modal-actions">
-              <button className="btn btn-ghost" type="button" onClick={() => setShowView(false)}>
+              <button className="btn btn-ghost" onClick={() => setShowView(false)}>
                 Close
               </button>
             </div>
