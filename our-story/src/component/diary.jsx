@@ -409,28 +409,51 @@ export default function Diary() {
       {showNewProfile && (
         <div className="modal-backdrop" onClick={() => setShowNewProfile(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Create Profile</h3>
-            <form onSubmit={handleCreateProfile}>
-              <input
-                className="input"
-                placeholder="Profile name"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-              />
-              <input
-                className="input"
-                type="password"
-                placeholder="Password"
-                value={newPass}
-                onChange={(e) => setNewPass(e.target.value)}
-              />
+            <div className="modal-header">
+              <h3>Create Profile</h3>
+              <button
+                className="icon-btn"
+                type="button"
+                onClick={() => setShowNewProfile(false)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <form className="form" onSubmit={handleCreateProfile}>
+              <div className="field">
+                <label htmlFor="newProfileName">Profile name</label>
+                <input
+                  id="newProfileName"
+                  className="input"
+                  placeholder="e.g. Belal"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="newProfilePass">Password</label>
+                <input
+                  id="newProfilePass"
+                  className="input"
+                  type="password"
+                  placeholder="Choose a password"
+                  value={newPass}
+                  onChange={(e) => setNewPass(e.target.value)}
+                />
+                <div className="help">
+                  This password will be required to view this profile’s diary.
+                </div>
+              </div>
+
               {!!createErr && (
-                <div style={{ color: "#d93025", marginTop: 8 }}>{createErr}</div>
+                <div style={{ color: "#d93025", fontWeight: 700 }}>{createErr}</div>
               )}
+
               <div className="modal-actions">
-                <button className="btn" type="submit" disabled={creating}>
-                  {creating ? "Creating…" : "Create"}
-                </button>
                 <button
                   className="btn btn-ghost"
                   type="button"
@@ -438,6 +461,9 @@ export default function Diary() {
                   disabled={creating}
                 >
                   Cancel
+                </button>
+                <button className="btn btn-primary" type="submit" disabled={creating}>
+                  {creating ? "Creating…" : "Create"}
                 </button>
               </div>
             </form>
@@ -449,31 +475,56 @@ export default function Diary() {
       {showNewEntry && (
         <div className="modal-backdrop" onClick={() => setShowNewEntry(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>New Entry</h3>
-            <form onSubmit={handleAddEntry}>
-              <input
-                className="input"
-                placeholder="Title"
-                value={entryTitle}
-                onChange={(e) => setEntryTitle(e.target.value)}
-              />
-              <input
-                className="input"
-                placeholder="Date (e.g. 2025-11-08)"
-                value={entryDate}
-                onChange={(e) => setEntryDate(e.target.value)}
-              />
-              <textarea
-                className="textarea"
-                rows={8}
-                placeholder="Write about your day…"
-                value={entryBody}
-                onChange={(e) => setEntryBody(e.target.value)}
-              />
+            <div className="modal-header">
+              <h3>New Entry</h3>
+              <button
+                className="icon-btn"
+                type="button"
+                onClick={() => setShowNewEntry(false)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <form className="form" onSubmit={handleAddEntry}>
+              <div className="form-row">
+                <div className="field">
+                  <label htmlFor="entryTitle">Title</label>
+                  <input
+                    id="entryTitle"
+                    className="input"
+                    placeholder="Title"
+                    value={entryTitle}
+                    onChange={(e) => setEntryTitle(e.target.value)}
+                  />
+                </div>
+
+                <div className="field">
+                  <label htmlFor="entryDate">Date</label>
+                  <input
+                    id="entryDate"
+                    className="input"
+                    type="date"
+                    value={entryDate}
+                    onChange={(e) => setEntryDate(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="field">
+                <label htmlFor="entryBody">Entry</label>
+                <textarea
+                  id="entryBody"
+                  className="textarea"
+                  placeholder="Write about your day…"
+                  rows={10}
+                  value={entryBody}
+                  onChange={(e) => setEntryBody(e.target.value)}
+                />
+              </div>
+
               <div className="modal-actions">
-                <button className="btn" type="submit" disabled={saving}>
-                  {saving ? "Saving…" : "Save"}
-                </button>
                 <button
                   className="btn btn-ghost"
                   type="button"
@@ -481,6 +532,9 @@ export default function Diary() {
                   disabled={saving}
                 >
                   Cancel
+                </button>
+                <button className="btn btn-primary" type="submit" disabled={saving}>
+                  {saving ? "Saving…" : "Save"}
                 </button>
               </div>
             </form>
@@ -492,11 +546,21 @@ export default function Diary() {
       {showView && viewing && (
         <div className="modal-backdrop" onClick={() => setShowView(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="entry-view-title">{viewing.title}</div>
+            <div className="modal-header">
+              <h3>{viewing.title}</h3>
+              <button
+                className="icon-btn"
+                type="button"
+                onClick={() => setShowView(false)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
             <div className="entry-view-date">{viewing.date}</div>
             <div className="entry-view-body">{viewing.body}</div>
             <div className="modal-actions">
-              <button className="btn" onClick={openEditFromView}>
+              <button className="btn btn-primary" onClick={openEditFromView}>
                 Edit
               </button>
               <button
@@ -518,31 +582,55 @@ export default function Diary() {
       {showEdit && (
         <div className="modal-backdrop" onClick={() => setShowEdit(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Edit Entry</h3>
-            <form onSubmit={handleSaveEdit}>
-              <input
-                className="input"
-                placeholder="Title"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-              />
-              <input
-                className="input"
-                placeholder="Date (e.g. 2025-11-08)"
-                value={editDate}
-                onChange={(e) => setEditDate(e.target.value)}
-              />
-              <textarea
-                className="textarea"
-                rows={8}
-                placeholder="Write about your day…"
-                value={editBody}
-                onChange={(e) => setEditBody(e.target.value)}
-              />
+            <div className="modal-header">
+              <h3>Edit Entry</h3>
+              <button
+                className="icon-btn"
+                type="button"
+                onClick={() => setShowEdit(false)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <form className="form" onSubmit={handleSaveEdit}>
+              <div className="form-row">
+                <div className="field">
+                  <label htmlFor="editTitle">Title</label>
+                  <input
+                    id="editTitle"
+                    className="input"
+                    placeholder="Title"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="editDate">Date</label>
+                  <input
+                    id="editDate"
+                    className="input"
+                    type="date"
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="field">
+                <label htmlFor="editBody">Entry</label>
+                <textarea
+                  id="editBody"
+                  className="textarea"
+                  rows={10}
+                  placeholder="Write about your day…"
+                  value={editBody}
+                  onChange={(e) => setEditBody(e.target.value)}
+                />
+              </div>
+
               <div className="modal-actions">
-                <button className="btn" type="submit" disabled={updating}>
-                  {updating ? "Saving…" : "Save"}
-                </button>
                 <button
                   className="btn btn-ghost"
                   type="button"
@@ -550,6 +638,9 @@ export default function Diary() {
                   disabled={updating}
                 >
                   Cancel
+                </button>
+                <button className="btn btn-primary" type="submit" disabled={updating}>
+                  {updating ? "Saving…" : "Save"}
                 </button>
               </div>
             </form>
@@ -561,7 +652,17 @@ export default function Diary() {
       {showDeleteEntry && (
         <div className="modal-backdrop" onClick={() => setShowDeleteEntry(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Delete Entry?</h3>
+            <div className="modal-header">
+              <h3>Delete Entry?</h3>
+              <button
+                className="icon-btn"
+                type="button"
+                onClick={() => setShowDeleteEntry(false)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
             <p>This action can’t be undone.</p>
             <div className="modal-actions">
               <button
@@ -588,19 +689,35 @@ export default function Diary() {
       {showDeleteProfile && (
         <div className="modal-backdrop" onClick={() => setShowDeleteProfile(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Delete Profile “{active}”?</h3>
+            <div className="modal-header">
+              <h3>Delete Profile “{active}”?</h3>
+              <button
+                className="icon-btn"
+                type="button"
+                onClick={() => setShowDeleteProfile(false)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
             <p>This will remove the profile and all of its diary entries.</p>
-            <form onSubmit={handleDeleteProfile}>
-              <input
-                className="input"
-                type="password"
-                placeholder="Enter profile password to confirm"
-                value={deleteProfilePass}
-                onChange={(e) => setDeleteProfilePass(e.target.value)}
-              />
+            <form className="form" onSubmit={handleDeleteProfile}>
+              <div className="field">
+                <label htmlFor="deleteProfilePass">Password</label>
+                <input
+                  id="deleteProfilePass"
+                  className="input"
+                  type="password"
+                  placeholder="Enter profile password to confirm"
+                  value={deleteProfilePass}
+                  onChange={(e) => setDeleteProfilePass(e.target.value)}
+                />
+              </div>
+
               {!!deleteProfileErr && (
                 <div style={{ color: "#d93025", marginTop: 8 }}>{deleteProfileErr}</div>
               )}
+
               <div className="modal-actions">
                 <button
                   className="btn btn-ghost"
