@@ -10,10 +10,10 @@
     "vercel-build": "vite build"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.80.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2",
-    "redis": "^4.7.1"
+    "react-router-dom": "^6.26.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.1.0",

@@ -1,101 +1,97 @@
-// /api/diary/[profile].js
-import { getRedisClient } from "../_redis.js";
+// api/diary/[profile].js
+import { supabaseAdmin } from "../../src/lib/supabase.js";
 
-async function loadProfiles(client) {
-  const raw = (await client.get("profiles")) || "[]";
-  return JSON.parse(raw);
-}
-
-function checkPassword(profiles, name, password) {
-  const p = profiles.find((x) => x.name === name);
-  if (!p) return { ok: false, code: 404, error: "Profile not found" };
-  if (p.password !== password)
-    return { ok: false, code: 403, error: "Incorrect password" };
-  return { ok: true };
-}
-
+/**
+ * Routes:
+ * GET    /api/diary/:profile?password=...                   -> { entries: [...] } or { error }
+ * POST   /api/diary/:profile { password, title, date, body }-> { ok: true } or { error }
+ * PUT    /api/diary/:profile { password, id, updates }      -> { ok: true } or { error }
+ * DELETE /api/diary/:profile { password, id }               -> { ok: true } or { error }
+ */
 export default async function handler(req, res) {
-  const client = await getRedisClient();
-  const { profile } = req.query; // dynamic segment [profile]
-  const key = `diary:${profile}`;
+  try {
+    const { profile } = req.query;
+    if (!profile) return res.status(400).json({ error: "Missing profile." });
 
-  // Ensure we always have an array
-  const getEntries = async () => JSON.parse((await client.get(key)) || "[]");
-  const saveEntries = async (arr) => client.set(key, JSON.stringify(arr));
+    // Helper: verify profile + password
+    async function verify(pass) {
+      const { data, error } = await supabaseAdmin
+        .from("profiles")
+        .select("name, password")
+        .eq("name", profile)
+        .single();
 
-  if (req.method === "GET") {
-    // List entries (no password required to list — your UI still gates read by unlock)
-    const entries = await getEntries();
-    return res.status(200).json({ entries });
+      if (error) return { ok: false, error: error.message };
+      if (!data || data.password !== pass) return { ok: false, error: "Invalid password." };
+      return { ok: true };
+    }
+
+    if (req.method === "GET") {
+      const { password } = req.query;
+      const v = await verify(password);
+      if (!v.ok) return res.status(403).json({ error: v.error });
+
+      const { data, error } = await supabaseAdmin
+        .from("entries")
+        .select("id, title, date, body, created_at")
+        .eq("profile", profile)
+        .order("created_at", { ascending: false });
+
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ entries: data || [] });
+    }
+
+    if (req.method === "POST") {
+      const { password, title, date, body } = req.body || {};
+      if (!title || !date || !body) {
+        return res.status(400).json({ error: "Title, date and body are required." });
+      }
+      const v = await verify(password);
+      if (!v.ok) return res.status(403).json({ error: v.error });
+
+      const { error } = await supabaseAdmin
+        .from("entries")
+        .insert([{ profile, title, date, body }]);
+
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
+    if (req.method === "PUT") {
+      const { password, id, updates } = req.body || {};
+      if (!id || !updates) return res.status(400).json({ error: "id and updates are required." });
+      const v = await verify(password);
+      if (!v.ok) return res.status(403).json({ error: v.error });
+
+      const { error } = await supabaseAdmin
+        .from("entries")
+        .update(updates)
+        .eq("id", id)
+        .eq("profile", profile);
+
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
+    if (req.method === "DELETE") {
+      const { password, id } = req.body || {};
+      if (!id) return res.status(400).json({ error: "id is required." });
+      const v = await verify(password);
+      if (!v.ok) return res.status(403).json({ error: v.error });
+
+      const { error } = await supabaseAdmin
+        .from("entries")
+        .delete()
+        .eq("id", id)
+        .eq("profile", profile);
+
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
+    res.setHeader("Allow", "GET,POST,PUT,DELETE");
+    return res.status(405).json({ error: "Method not allowed" });
+  } catch (e) {
+    return res.status(500).json({ error: e.message || "Server error" });
   }
-
-  if (req.method === "POST") {
-    // Create entry
-    const { password, title, date, body } = req.body || {};
-    if (!title || !date || !body || !password)
-      return res.status(400).json({ error: "Missing fields" });
-
-    const profiles = await loadProfiles(client);
-    const ok = checkPassword(profiles, profile, password);
-    if (!ok.ok) return res.status(ok.code).json({ error: ok.error });
-
-    const entries = await getEntries();
-    const now = Date.now();
-    const id = `${now.toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-    entries.unshift({
-      id,
-      title,
-      date,
-      body,
-      createdAt: now,
-      updatedAt: now,
-    });
-    await saveEntries(entries);
-    return res.status(200).json({ ok: true, id });
-  }
-
-  if (req.method === "PUT") {
-    // Edit entry (title/date/body)
-    const { password, id, updates = {} } = req.body || {};
-    if (!password || !id) return res.status(400).json({ error: "Missing id or password" });
-
-    const profiles = await loadProfiles(client);
-    const ok = checkPassword(profiles, profile, password);
-    if (!ok.ok) return res.status(ok.code).json({ error: ok.error });
-
-    const entries = await getEntries();
-    const idx = entries.findIndex((e) => e.id === id);
-    if (idx === -1) return res.status(404).json({ error: "Entry not found" });
-
-    entries[idx] = {
-      ...entries[idx],
-      ...["title", "date", "body"].reduce((o, k) => {
-        if (updates[k] !== undefined) o[k] = updates[k];
-        return o;
-      }, {}),
-      updatedAt: Date.now(),
-    };
-    await saveEntries(entries);
-    return res.status(200).json({ ok: true });
-  }
-
-  if (req.method === "DELETE") {
-    // Delete entry
-    const { password, id } = req.body || {};
-    if (!password || !id) return res.status(400).json({ error: "Missing id or password" });
-
-    const profiles = await loadProfiles(client);
-    const ok = checkPassword(profiles, profile, password);
-    if (!ok.ok) return res.status(ok.code).json({ error: ok.error });
-
-    const entries = await getEntries();
-    const next = entries.filter((e) => e.id !== id);
-    if (next.length === entries.length)
-      return res.status(404).json({ error: "Entry not found" });
-
-    await saveEntries(next);
-    return res.status(200).json({ ok: true });
-  }
-
-  return res.status(405).json({ error: "Method not allowed" });
 }
