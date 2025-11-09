@@ -1,87 +1,88 @@
-// api/profiles.js
-import { supabaseAdmin } from "../src/lib/supabase.js";
+// /api/profiles.js
+import { getAdminClient } from './_supabase.js';
+import bcrypt from 'bcryptjs';
 
-/**
- * Routes:
- * GET    /api/profiles                     -> { profiles: [{ name }] }
- * POST   /api/profiles { name, password }  -> { ok: true } or { error }
- * DELETE /api/profiles { name, password }  -> { ok: true } or { error }
- */
 export default async function handler(req, res) {
-  try {
-    if (req.method === "GET") {
-      const { data, error } = await supabaseAdmin
-        .from("profiles")
-        .select("name")
-        .order("name", { ascending: true });
+  const supabase = getAdminClient();
 
-      if (error) return res.status(400).json({ error: error.message });
+  try {
+    if (req.method === 'GET') {
+      // list profiles (names only)
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('name')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
       return res.status(200).json({ profiles: data || [] });
     }
 
-    if (req.method === "POST") {
+    if (req.method === 'POST') {
       const { name, password } = req.body || {};
       if (!name || !password) {
-        return res.status(400).json({ error: "Name and password are required." });
+        return res.status(400).json({ error: 'Name and password required.' });
       }
 
-      // Ensure unique name
-      const { data: exists, error: checkErr } = await supabaseAdmin
-        .from("profiles")
-        .select("name")
-        .eq("name", name)
+      // is name unique?
+      const { data: existing, error: exErr } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('name', name)
         .maybeSingle();
 
-      if (checkErr) return res.status(400).json({ error: checkErr.message });
-      if (exists) return res.status(400).json({ error: "Profile name already exists." });
+      if (exErr) throw exErr;
+      if (existing) return res.status(400).json({ error: 'Profile name already exists.' });
 
-      const { error: insErr } = await supabaseAdmin
-        .from("profiles")
-        .insert([{ name, password }]); // (Optional) hash password later
+      const hash = await bcrypt.hash(password, 10);
 
-      if (insErr) return res.status(400).json({ error: insErr.message });
+      const { error: insErr } = await supabase
+        .from('profiles')
+        .insert([{ name, password_hash: hash }]);
+
+      if (insErr) throw insErr;
+
       return res.status(200).json({ ok: true });
     }
 
-    if (req.method === "DELETE") {
+    if (req.method === 'DELETE') {
       const { name, password } = req.body || {};
       if (!name || !password) {
-        return res.status(400).json({ error: "Name and password are required." });
-        }
-
-      // Verify password
-      const { data: prof, error: profErr } = await supabaseAdmin
-        .from("profiles")
-        .select("name, password")
-        .eq("name", name)
-        .single();
-
-      if (profErr) return res.status(400).json({ error: profErr.message });
-      if (!prof || prof.password !== password) {
-        return res.status(403).json({ error: "Invalid password." });
+        return res.status(400).json({ error: 'Name and password required.' });
       }
 
-      // Delete entries for this profile first (then the profile)
-      const { error: delEntriesErr } = await supabaseAdmin
-        .from("entries")
+      const { data: profile, error: getErr } = await supabase
+        .from('profiles')
+        .select('id, password_hash')
+        .eq('name', name)
+        .maybeSingle();
+
+      if (getErr) throw getErr;
+      if (!profile) return res.status(404).json({ error: 'Profile not found.' });
+
+      const ok = await bcrypt.compare(password, profile.password_hash);
+      if (!ok) return res.status(401).json({ error: 'Incorrect password.' });
+
+      // cascade delete will remove diary_entries automatically
+      const { error: delErr } = await supabase
+        .from('profiles')
         .delete()
-        .eq("profile", name);
+        .eq('id', profile.id);
 
-      if (delEntriesErr) return res.status(400).json({ error: delEntriesErr.message });
-
-      const { error: delProfErr } = await supabaseAdmin
-        .from("profiles")
-        .delete()
-        .eq("name", name);
-
-      if (delProfErr) return res.status(400).json({ error: delProfErr.message });
+      if (delErr) throw delErr;
 
       return res.status(200).json({ ok: true });
     }
 
-    res.setHeader("Allow", "GET,POST,DELETE");
-    return res.status(405).json({ error: "Method not allowed" });
-  } catch (e) {
-    return res.status(500).json({ error: e.message || "Server error" });
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch (err) {
+    console.error('profiles API error', err);
+    return res.status(500).json({ error: 'A server error occurred.' });
   }
 }
+
+export const config = {
+  api: {
+    bodyParser: true
+  }
+};

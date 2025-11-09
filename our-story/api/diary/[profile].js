@@ -1,97 +1,136 @@
-// api/diary/[profile].js
-import { supabaseAdmin } from "../../src/lib/supabase.js";
+// /api/diary/[profile].js
+import { getAdminClient } from '../_supabase.js';
+import bcrypt from 'bcryptjs';
 
-/**
- * Routes:
- * GET    /api/diary/:profile?password=...                   -> { entries: [...] } or { error }
- * POST   /api/diary/:profile { password, title, date, body }-> { ok: true } or { error }
- * PUT    /api/diary/:profile { password, id, updates }      -> { ok: true } or { error }
- * DELETE /api/diary/:profile { password, id }               -> { ok: true } or { error }
- */
+async function getProfileByName(supabase, profileName) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, password_hash')
+    .eq('name', profileName)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data || null;
+}
+
+async function verifyPassword(supabase, profileName, password) {
+  const profile = await getProfileByName(supabase, profileName);
+  if (!profile) return { ok: false, reason: 'not-found' };
+
+  const match = await bcrypt.compare(password, profile.password_hash);
+  if (!match) return { ok: false, reason: 'bad-pass' };
+
+  return { ok: true, profile };
+}
+
 export default async function handler(req, res) {
-  try {
-    const { profile } = req.query;
-    if (!profile) return res.status(400).json({ error: "Missing profile." });
+  const supabase = getAdminClient();
+  const { profile } = req.query; // route param
 
-    // Helper: verify profile + password
-    async function verify(pass) {
-      const { data, error } = await supabaseAdmin
-        .from("profiles")
-        .select("name, password")
-        .eq("name", profile)
+  try {
+    if (req.method === 'GET') {
+      const password = req.query.password || '';
+      if (!password) return res.status(400).json({ error: 'Password required.' });
+
+      const check = await verifyPassword(supabase, profile, password);
+      if (!check.ok) {
+        const status = check.reason === 'not-found' ? 404 : 401;
+        return res.status(status).json({ error: check.reason === 'not-found' ? 'Profile not found.' : 'Incorrect password.' });
+      }
+
+      const { data: entries, error: entErr } = await supabase
+        .from('diary_entries')
+        .select('id, title, body, date')
+        .eq('profile_id', check.profile.id)
+        .order('created_at', { ascending: true });
+
+      if (entErr) throw entErr;
+
+      return res.status(200).json({ entries: entries || [] });
+    }
+
+    if (req.method === 'POST') {
+      const { password, title, date, body } = req.body || {};
+      if (!password || !title || !date || !body) {
+        return res.status(400).json({ error: 'password, title, date, body are required.' });
+      }
+
+      const check = await verifyPassword(supabase, profile, password);
+      if (!check.ok) {
+        const status = check.reason === 'not-found' ? 404 : 401;
+        return res.status(status).json({ error: check.reason === 'not-found' ? 'Profile not found.' : 'Incorrect password.' });
+      }
+
+      const { data, error: insErr } = await supabase
+        .from('diary_entries')
+        .insert([{ profile_id: check.profile.id, title, date, body }])
+        .select('id')
         .single();
 
-      if (error) return { ok: false, error: error.message };
-      if (!data || data.password !== pass) return { ok: false, error: "Invalid password." };
-      return { ok: true };
+      if (insErr) throw insErr;
+
+      return res.status(200).json({ ok: true, id: data?.id });
     }
 
-    if (req.method === "GET") {
-      const { password } = req.query;
-      const v = await verify(password);
-      if (!v.ok) return res.status(403).json({ error: v.error });
-
-      const { data, error } = await supabaseAdmin
-        .from("entries")
-        .select("id, title, date, body, created_at")
-        .eq("profile", profile)
-        .order("created_at", { ascending: false });
-
-      if (error) return res.status(400).json({ error: error.message });
-      return res.status(200).json({ entries: data || [] });
-    }
-
-    if (req.method === "POST") {
-      const { password, title, date, body } = req.body || {};
-      if (!title || !date || !body) {
-        return res.status(400).json({ error: "Title, date and body are required." });
-      }
-      const v = await verify(password);
-      if (!v.ok) return res.status(403).json({ error: v.error });
-
-      const { error } = await supabaseAdmin
-        .from("entries")
-        .insert([{ profile, title, date, body }]);
-
-      if (error) return res.status(400).json({ error: error.message });
-      return res.status(200).json({ ok: true });
-    }
-
-    if (req.method === "PUT") {
+    if (req.method === 'PUT') {
       const { password, id, updates } = req.body || {};
-      if (!id || !updates) return res.status(400).json({ error: "id and updates are required." });
-      const v = await verify(password);
-      if (!v.ok) return res.status(403).json({ error: v.error });
+      if (!password || !id || !updates) {
+        return res.status(400).json({ error: 'password, id and updates are required.' });
+      }
 
-      const { error } = await supabaseAdmin
-        .from("entries")
-        .update(updates)
-        .eq("id", id)
-        .eq("profile", profile);
+      const check = await verifyPassword(supabase, profile, password);
+      if (!check.ok) {
+        const status = check.reason === 'not-found' ? 404 : 401;
+        return res.status(status).json({ error: check.reason === 'not-found' ? 'Profile not found.' : 'Incorrect password.' });
+      }
 
-      if (error) return res.status(400).json({ error: error.message });
+      const { error: updErr } = await supabase
+        .from('diary_entries')
+        .update({
+          title: updates.title,
+          date: updates.date,
+          body: updates.body
+        })
+        .eq('id', id)
+        .eq('profile_id', check.profile.id);
+
+      if (updErr) throw updErr;
+
       return res.status(200).json({ ok: true });
     }
 
-    if (req.method === "DELETE") {
+    if (req.method === 'DELETE') {
       const { password, id } = req.body || {};
-      if (!id) return res.status(400).json({ error: "id is required." });
-      const v = await verify(password);
-      if (!v.ok) return res.status(403).json({ error: v.error });
+      if (!password || !id) {
+        return res.status(400).json({ error: 'password and id are required.' });
+      }
 
-      const { error } = await supabaseAdmin
-        .from("entries")
+      const check = await verifyPassword(supabase, profile, password);
+      if (!check.ok) {
+        const status = check.reason === 'not-found' ? 404 : 401;
+        return res.status(status).json({ error: check.reason === 'not-found' ? 'Profile not found.' : 'Incorrect password.' });
+      }
+
+      const { error: delErr } = await supabase
+        .from('diary_entries')
         .delete()
-        .eq("id", id)
-        .eq("profile", profile);
+        .eq('id', id)
+        .eq('profile_id', check.profile.id);
 
-      if (error) return res.status(400).json({ error: error.message });
+      if (delErr) throw delErr;
+
       return res.status(200).json({ ok: true });
     }
 
-    res.setHeader("Allow", "GET,POST,PUT,DELETE");
-    return res.status(405).json({ error: "Method not allowed" });
-  } catch (e) {
-    return res.status(500).json({ error: e.message || "Server error" });
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch (err) {
+    console.error('diary API error', err);
+    return res.status(500).json({ error: 'A server error occurred.' });
   }
 }
+
+export const config = {
+  api: {
+    bodyParser: true
+  }
+};

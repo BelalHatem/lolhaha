@@ -1,8 +1,7 @@
-// src/lib/supabase.js
-import { createClient } from "@supabase/supabase-js";
+// /src/lib/supabase.js
+import { createClient } from '@supabase/supabase-js';
 
-// Use the Service Role for serverless API routes (do NOT expose in client)
-export const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE
-);
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
