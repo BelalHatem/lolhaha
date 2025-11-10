@@ -264,8 +264,6 @@ export default function Diary() {
         </div>
       )}
 
-      {/* MODALS */}
-
       {/* NEW PROFILE */}
       {showNewProfile && (
         <div className="modal-backdrop">
@@ -313,42 +311,47 @@ export default function Diary() {
         </div>
       )}
 
-      {/* VIEW ENTRY — with floating Edit button next to × */}
+      {/* VIEW ENTRY — floating Edit button adjusted */}
       {showView && viewing && (
         <div className="modal-backdrop">
           <div className="modal modal--viewer" style={{ position: "relative" }}>
             {/* Close (X) */}
             <button
               className="icon-btn modal-close"
+              type="button"
               onClick={() => setShowView(false)}
               aria-label="Close"
               title="Close"
+              style={{ zIndex: 3 }}
             >
               ×
             </button>
 
-            {/* Floating Edit button */}
+            {/* Floating Edit button (shifted left, higher z-index, explicit type) */}
             <button
               className="icon-btn"
+              type="button"
               onClick={openEditFromView}
               aria-label="Edit"
               title="Edit"
               style={{
                 position: "absolute",
                 top: 10,
-                right: 46,        // sits just left of the X button
+                right: 72,          // moved left so it’s not under the X
+                zIndex: 3,          // ensure it’s above everything
                 fontSize: 16,
                 padding: "6px 10px",
                 borderRadius: 999,
                 background: "#2263e0",
                 color: "#fff",
-                boxShadow: "0 8px 18px -10px rgba(34,99,224,.55)"
+                boxShadow: "0 8px 18px -10px rgba(34,99,224,.55)",
+                cursor: "pointer",
               }}
             >
               Edit
             </button>
 
-            <div className="modal-header" style={{ paddingRight: 90 }}>
+            <div className="modal-header" style={{ paddingRight: 110 }}>
               <h3>{viewing.title}</h3>
             </div>
             <div className="modal-body">
@@ -356,7 +359,7 @@ export default function Diary() {
               <div className="entry-view-body">{viewing.body}</div>
             </div>
 
-            {/* Desktop actions still available at bottom (optional) */}
+            {/* Bottom actions (desktop) */}
             <div className="modal-actions">
               <button className="btn btn-ghost"
                 onClick={() => { setDeleteId(viewing.id); setShowView(false); setShowDeleteEntry(true); }}>
