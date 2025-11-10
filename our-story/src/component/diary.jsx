@@ -112,7 +112,8 @@ export default function Diary() {
     const res = await api.createProfile(newName.trim(), newPass.trim());
     if (res.error) setCreateErr(res.error);
     else {
-      setProfiles(await api.listProfiles().then((r) => r.profiles));
+      const refreshed = await api.listProfiles();
+      setProfiles(refreshed.profiles || []);
       setActive(newName.trim());
       setShowNewProfile(false);
       setNewName("");
@@ -142,63 +143,57 @@ export default function Diary() {
     });
     if (!res.error) {
       setShowNewEntry(false);
-      setEntryTitle("");
-      setEntryDate("");
-      setEntryBody("");
+      setEntryTitle(""); setEntryDate(""); setEntryBody("");
       const updated = await api.listEntries(active, passInput);
-      setEntries(updated.entries);
+      setEntries(updated.entries || []);
     }
   }
 
   /* OPEN ENTRY */
-  function openEntry(en) {
-    setViewing(en);
-    setShowView(true);
-  }
+  function openEntry(en) { setViewing(en); setShowView(true); }
 
   /* OPEN EDIT */
   function openEditFromView() {
     setShowView(false);
     setShowEdit(true);
+    setEditId(viewing.id);
     setEditTitle(viewing.title);
     setEditDate(viewing.date);
     setEditBody(viewing.body);
-    setEditId(viewing.id);
   }
 
   /* SAVE EDIT */
   async function handleSaveEdit(e) {
     e.preventDefault();
-    await api.editEntry(active, passInput, editId, {
-      title: editTitle,
-      date: editDate,
-      body: editBody,
+    const res = await api.editEntry(active, passInput, editId, {
+      title: editTitle, date: editDate, body: editBody,
     });
-    setShowEdit(false);
-    const updated = await api.listEntries(active, passInput);
-    setEntries(updated.entries);
+    if (!res.error) {
+      setShowEdit(false);
+      const updated = await api.listEntries(active, passInput);
+      setEntries(updated.entries || []);
+    }
   }
 
   /* DELETE ENTRY */
   async function handleDeleteEntryConfirm() {
-    await api.deleteEntry(active, passInput, deleteId);
-    setShowDeleteEntry(false);
-    const updated = await api.listEntries(active, passInput);
-    setEntries(updated.entries);
+    const res = await api.deleteEntry(active, passInput, deleteId);
+    if (!res.error) {
+      setShowDeleteEntry(false);
+      const updated = await api.listEntries(active, passInput);
+      setEntries(updated.entries || []);
+    }
   }
 
   /* DELETE PROFILE */
   async function handleDeleteProfile(e) {
     e.preventDefault();
     const r = await api.deleteProfile(active, deleteProfilePass);
-    if (r.error) {
-      setDeleteProfileErr(r.error);
-      return;
-    }
+    if (r.error) { setDeleteProfileErr(r.error); return; }
     setShowDeleteProfile(false);
-    setActive("");
-    setUnlocked(false);
-    setProfiles(await api.listProfiles().then((r) => r.profiles));
+    setActive(""); setUnlocked(false);
+    const refreshed = await api.listProfiles();
+    setProfiles(refreshed.profiles || []);
   }
 
   return (
@@ -269,21 +264,18 @@ export default function Diary() {
         </div>
       )}
 
-      {/* MODALS — FULL CODE INCLUDED */}
+      {/* MODALS */}
 
-      {/* NEW PROFILE */}
+      {/* NEW PROFILE (full-screen on phone, classic on desktop) */}
       {showNewProfile && (
         <div className="modal-backdrop">
           <div className="modal">
             <button className="icon-btn modal-close" onClick={() => setShowNewProfile(false)}>×</button>
-            <div className="modal-header">
-              <h3>Create Profile</h3>
-            </div>
+            <div className="modal-header"><h3>Create Profile</h3></div>
             <div className="modal-body">
               <form onSubmit={handleCreateProfile}>
                 <label>Profile Name</label>
                 <input className="input" value={newName} onChange={(e) => setNewName(e.target.value)} />
-
                 <label>Password</label>
                 <input className="input" type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)} />
                 {createErr && <div style={{ color: "red", marginTop: 6 }}>{createErr}</div>}
@@ -297,22 +289,18 @@ export default function Diary() {
         </div>
       )}
 
-      {/* NEW ENTRY */}
+      {/* NEW ENTRY (full-screen on phone, classic on desktop) */}
       {showNewEntry && (
         <div className="modal-backdrop">
           <div className="modal">
             <button className="icon-btn modal-close" onClick={() => setShowNewEntry(false)}>×</button>
-            <div className="modal-header">
-              <h3>New Entry</h3>
-            </div>
+            <div className="modal-header"><h3>New Entry</h3></div>
             <div className="modal-body">
               <form onSubmit={handleAddEntry}>
                 <label>Title</label>
                 <input className="input" value={entryTitle} onChange={(e) => setEntryTitle(e.target.value)} />
-
                 <label>Date</label>
                 <input className="input" type="date" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} />
-
                 <label>Entry</label>
                 <textarea className="textarea" value={entryBody} onChange={(e) => setEntryBody(e.target.value)} />
               </form>
@@ -325,28 +313,31 @@ export default function Diary() {
         </div>
       )}
 
-      {/* VIEW ENTRY */}
+      {/* VIEW ENTRY — phone = immersive page (header/actions hidden) */}
       {showView && viewing && (
         <div className="modal-backdrop">
-          <div className="modal">
+          <div className="modal modal--viewer">
             <button className="icon-btn modal-close" onClick={() => setShowView(false)}>×</button>
-            <div className="modal-header">
-              <h3>{viewing.title}</h3>
-            </div>
+            <div className="modal-header"><h3>{viewing.title}</h3></div>
             <div className="modal-body">
               <div className="entry-view-date">{viewing.date}</div>
               <div className="entry-view-body">{viewing.body}</div>
             </div>
             <div className="modal-actions">
               <button className="btn btn-primary" onClick={openEditFromView}>Edit</button>
-              <button className="btn btn-ghost" onClick={() => { setDeleteId(viewing.id); setShowView(false); setShowDeleteEntry(true); }}>Delete</button>
+              <button
+                className="btn btn-ghost"
+                onClick={() => { setDeleteId(viewing.id); setShowView(false); setShowDeleteEntry(true); }}
+              >
+                Delete
+              </button>
               <button className="btn btn-ghost" onClick={() => setShowView(false)}>Close</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* EDIT ENTRY */}
+      {/* EDIT ENTRY (full-screen on phone, classic on desktop) */}
       {showEdit && (
         <div className="modal-backdrop">
           <div className="modal">
@@ -376,9 +367,7 @@ export default function Diary() {
           <div className="modal">
             <button className="icon-btn modal-close" onClick={() => setShowDeleteEntry(false)}>×</button>
             <div className="modal-header"><h3>Delete Entry?</h3></div>
-            <div className="modal-body">
-              <p>This action cannot be undone.</p>
-            </div>
+            <div className="modal-body"><p>This action cannot be undone.</p></div>
             <div className="modal-actions">
               <button className="btn btn-ghost" onClick={() => setShowDeleteEntry(false)}>Cancel</button>
               <button className="btn" style={{ background: "#c62828" }} onClick={handleDeleteEntryConfirm}>Delete</button>
@@ -395,8 +384,13 @@ export default function Diary() {
             <div className="modal-header"><h3>Delete Profile?</h3></div>
             <div className="modal-body">
               <p>This will delete all entries for this profile.</p>
-              <input className="input" type="password" placeholder="Enter password to confirm"
-                value={deleteProfilePass} onChange={(e) => setDeleteProfilePass(e.target.value)} />
+              <input
+                className="input"
+                type="password"
+                placeholder="Enter password to confirm"
+                value={deleteProfilePass}
+                onChange={(e) => setDeleteProfilePass(e.target.value)}
+              />
               {deleteProfileErr && <div style={{ color: "red", marginTop: 6 }}>{deleteProfileErr}</div>}
             </div>
             <div className="modal-actions">
