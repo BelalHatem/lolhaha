@@ -23,12 +23,12 @@ const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, password }),
     });
-    return res.json(); // { ok } or { error }
+    return res.json();
   },
   async listEntries(profile, password) {
     const qs = new URLSearchParams({ password }).toString();
     const res = await fetch(`/api/diary/${encodeURIComponent(profile)}?${qs}`);
-    return res.json(); // { entries } or { error }
+    return res.json();
   },
   async addEntry(profile, password, entry) {
     const res = await fetch(`/api/diary/${encodeURIComponent(profile)}`, {
@@ -44,7 +44,7 @@ const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password, id, updates }),
     });
-    return res.json(); // { ok } or { error }
+    return res.json();
   },
   async deleteEntry(profile, password, id) {
     const res = await fetch(`/api/diary/${encodeURIComponent(profile)}`, {
@@ -52,7 +52,7 @@ const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password, id }),
     });
-    return res.json(); // { ok } or { error }
+    return res.json();
   },
 };
 
@@ -117,6 +117,26 @@ export default function Diary() {
     setEntries([]);
   }, [active]);
 
+  /* ---------- ESC to close whichever modal is open ---------- */
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key !== "Escape") return;
+      // Close the "top-most" modal. Adjust order as you prefer.
+      if (showEdit) return setShowEdit(false);
+      if (showView) return setShowView(false);
+      if (showNewEntry) return setShowNewEntry(false);
+      if (showNewProfile) return setShowNewProfile(false);
+      if (showDeleteEntry) return setShowDeleteEntry(false);
+      if (showDeleteProfile) return setShowDeleteProfile(false);
+    }
+    const anyOpen =
+      showEdit || showView || showNewEntry || showNewProfile || showDeleteEntry || showDeleteProfile;
+    if (anyOpen) {
+      window.addEventListener("keydown", onKey);
+      return () => window.removeEventListener("keydown", onKey);
+    }
+  }, [showEdit, showView, showNewEntry, showNewProfile, showDeleteEntry, showDeleteProfile]);
+
   /* ---------- create profile ---------- */
   async function handleCreateProfile(e) {
     e.preventDefault();
@@ -150,7 +170,7 @@ export default function Diary() {
     }
   }
 
-  /* ---------- unlock (server-verified) ---------- */
+  /* ---------- unlock ---------- */
   async function handleUnlock(e) {
     e.preventDefault();
     if (!active || unlocking) return;
@@ -301,7 +321,6 @@ export default function Diary() {
         setDeleteProfileErr(resp.error);
         return;
       }
-      // remove from list & reset UI
       const updated = (profiles || []).filter((p) => (p.name || p) !== active);
       setProfiles(updated);
       setActive("");
@@ -407,8 +426,8 @@ export default function Diary() {
 
       {/* New Profile Modal */}
       {showNewProfile && (
-        <div className="modal-backdrop" onClick={() => setShowNewProfile(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop">
+          <div className="modal">
             <div className="modal-header">
               <h3>Create Profile</h3>
               <button
@@ -421,60 +440,62 @@ export default function Diary() {
               </button>
             </div>
 
-            <form className="form" onSubmit={handleCreateProfile}>
-              <div className="field">
-                <label htmlFor="newProfileName">Profile name</label>
-                <input
-                  id="newProfileName"
-                  className="input"
-                  placeholder="e.g. Belal"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  autoFocus
-                />
-              </div>
-
-              <div className="field">
-                <label htmlFor="newProfilePass">Password</label>
-                <input
-                  id="newProfilePass"
-                  className="input"
-                  type="password"
-                  placeholder="Choose a password"
-                  value={newPass}
-                  onChange={(e) => setNewPass(e.target.value)}
-                />
-                <div className="help">
-                  This password will be required to view this profile’s diary.
+            <div className="modal-body">
+              <form className="form" onSubmit={handleCreateProfile}>
+                <div className="field">
+                  <label htmlFor="newProfileName">Profile name</label>
+                  <input
+                    id="newProfileName"
+                    className="input"
+                    placeholder="e.g. Belal"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    autoFocus
+                  />
                 </div>
-              </div>
 
-              {!!createErr && (
-                <div style={{ color: "#d93025", fontWeight: 700 }}>{createErr}</div>
-              )}
+                <div className="field">
+                  <label htmlFor="newProfilePass">Password</label>
+                  <input
+                    id="newProfilePass"
+                    className="input"
+                    type="password"
+                    placeholder="Choose a password"
+                    value={newPass}
+                    onChange={(e) => setNewPass(e.target.value)}
+                  />
+                  <div className="help">
+                    This password will be required to view this profile’s diary.
+                  </div>
+                </div>
 
-              <div className="modal-actions">
-                <button
-                  className="btn btn-ghost"
-                  type="button"
-                  onClick={() => setShowNewProfile(false)}
-                  disabled={creating}
-                >
-                  Cancel
-                </button>
-                <button className="btn btn-primary" type="submit" disabled={creating}>
-                  {creating ? "Creating…" : "Create"}
-                </button>
-              </div>
-            </form>
+                {!!createErr && (
+                  <div style={{ color: "#d93025", fontWeight: 700 }}>{createErr}</div>
+                )}
+              </form>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="btn btn-ghost"
+                type="button"
+                onClick={() => setShowNewProfile(false)}
+                disabled={creating}
+              >
+                Cancel
+              </button>
+              <button className="btn btn-primary" onClick={handleCreateProfile} disabled={creating}>
+                {creating ? "Creating…" : "Create"}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* New Entry Modal */}
       {showNewEntry && (
-        <div className="modal-backdrop" onClick={() => setShowNewEntry(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop">
+          <div className="modal">
             <div className="modal-header">
               <h3>New Entry</h3>
               <button
@@ -487,65 +508,67 @@ export default function Diary() {
               </button>
             </div>
 
-            <form className="form" onSubmit={handleAddEntry}>
-              <div className="form-row">
-                <div className="field">
-                  <label htmlFor="entryTitle">Title</label>
-                  <input
-                    id="entryTitle"
-                    className="input"
-                    placeholder="Title"
-                    value={entryTitle}
-                    onChange={(e) => setEntryTitle(e.target.value)}
-                  />
+            <div className="modal-body">
+              <form className="form" onSubmit={handleAddEntry}>
+                <div className="form-row">
+                  <div className="field">
+                    <label htmlFor="entryTitle">Title</label>
+                    <input
+                      id="entryTitle"
+                      className="input"
+                      placeholder="Title"
+                      value={entryTitle}
+                      onChange={(e) => setEntryTitle(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="field">
+                    <label htmlFor="entryDate">Date</label>
+                    <input
+                      id="entryDate"
+                      className="input"
+                      type="date"
+                      value={entryDate}
+                      onChange={(e) => setEntryDate(e.target.value)}
+                    />
+                  </div>
                 </div>
 
                 <div className="field">
-                  <label htmlFor="entryDate">Date</label>
-                  <input
-                    id="entryDate"
-                    className="input"
-                    type="date"
-                    value={entryDate}
-                    onChange={(e) => setEntryDate(e.target.value)}
+                  <label htmlFor="entryBody">Entry</label>
+                  <textarea
+                    id="entryBody"
+                    className="textarea"
+                    placeholder="Write about your day…"
+                    rows={10}
+                    value={entryBody}
+                    onChange={(e) => setEntryBody(e.target.value)}
                   />
                 </div>
-              </div>
+              </form>
+            </div>
 
-              <div className="field">
-                <label htmlFor="entryBody">Entry</label>
-                <textarea
-                  id="entryBody"
-                  className="textarea"
-                  placeholder="Write about your day…"
-                  rows={10}
-                  value={entryBody}
-                  onChange={(e) => setEntryBody(e.target.value)}
-                />
-              </div>
-
-              <div className="modal-actions">
-                <button
-                  className="btn btn-ghost"
-                  type="button"
-                  onClick={() => setShowNewEntry(false)}
-                  disabled={saving}
-                >
-                  Cancel
-                </button>
-                <button className="btn btn-primary" type="submit" disabled={saving}>
-                  {saving ? "Saving…" : "Save"}
-                </button>
-              </div>
-            </form>
+            <div className="modal-actions">
+              <button
+                className="btn btn-ghost"
+                type="button"
+                onClick={() => setShowNewEntry(false)}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+              <button className="btn btn-primary" onClick={handleAddEntry} disabled={saving}>
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* View Entry Modal */}
       {showView && viewing && (
-        <div className="modal-backdrop" onClick={() => setShowView(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop">
+          <div className="modal">
             <div className="modal-header">
               <h3>{viewing.title}</h3>
               <button
@@ -557,8 +580,12 @@ export default function Diary() {
                 ×
               </button>
             </div>
-            <div className="entry-view-date">{viewing.date}</div>
-            <div className="entry-view-body">{viewing.body}</div>
+
+            <div className="modal-body">
+              <div className="entry-view-date">{viewing.date}</div>
+              <div className="entry-view-body">{viewing.body}</div>
+            </div>
+
             <div className="modal-actions">
               <button className="btn btn-primary" onClick={openEditFromView}>
                 Edit
@@ -580,8 +607,8 @@ export default function Diary() {
 
       {/* Edit Entry Modal */}
       {showEdit && (
-        <div className="modal-backdrop" onClick={() => setShowEdit(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop">
+          <div className="modal">
             <div className="modal-header">
               <h3>Edit Entry</h3>
               <button
@@ -594,64 +621,66 @@ export default function Diary() {
               </button>
             </div>
 
-            <form className="form" onSubmit={handleSaveEdit}>
-              <div className="form-row">
+            <div className="modal-body">
+              <form className="form" onSubmit={handleSaveEdit}>
+                <div className="form-row">
+                  <div className="field">
+                    <label htmlFor="editTitle">Title</label>
+                    <input
+                      id="editTitle"
+                      className="input"
+                      placeholder="Title"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="editDate">Date</label>
+                    <input
+                      id="editDate"
+                      className="input"
+                      type="date"
+                      value={editDate}
+                      onChange={(e) => setEditDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+
                 <div className="field">
-                  <label htmlFor="editTitle">Title</label>
-                  <input
-                    id="editTitle"
-                    className="input"
-                    placeholder="Title"
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
+                  <label htmlFor="editBody">Entry</label>
+                  <textarea
+                    id="editBody"
+                    className="textarea"
+                    rows={10}
+                    placeholder="Write about your day…"
+                    value={editBody}
+                    onChange={(e) => setEditBody(e.target.value)}
                   />
                 </div>
-                <div className="field">
-                  <label htmlFor="editDate">Date</label>
-                  <input
-                    id="editDate"
-                    className="input"
-                    type="date"
-                    value={editDate}
-                    onChange={(e) => setEditDate(e.target.value)}
-                  />
-                </div>
-              </div>
+              </form>
+            </div>
 
-              <div className="field">
-                <label htmlFor="editBody">Entry</label>
-                <textarea
-                  id="editBody"
-                  className="textarea"
-                  rows={10}
-                  placeholder="Write about your day…"
-                  value={editBody}
-                  onChange={(e) => setEditBody(e.target.value)}
-                />
-              </div>
-
-              <div className="modal-actions">
-                <button
-                  className="btn btn-ghost"
-                  type="button"
-                  onClick={() => setShowEdit(false)}
-                  disabled={updating}
-                >
-                  Cancel
-                </button>
-                <button className="btn btn-primary" type="submit" disabled={updating}>
-                  {updating ? "Saving…" : "Save"}
-                </button>
-              </div>
-            </form>
+            <div className="modal-actions">
+              <button
+                className="btn btn-ghost"
+                type="button"
+                onClick={() => setShowEdit(false)}
+                disabled={updating}
+              >
+                Cancel
+              </button>
+              <button className="btn btn-primary" onClick={handleSaveEdit} disabled={updating}>
+                {updating ? "Saving…" : "Save"}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Delete Entry Confirm */}
       {showDeleteEntry && (
-        <div className="modal-backdrop" onClick={() => setShowDeleteEntry(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop">
+          <div className="modal">
             <div className="modal-header">
               <h3>Delete Entry?</h3>
               <button
@@ -663,7 +692,11 @@ export default function Diary() {
                 ×
               </button>
             </div>
-            <p>This action can’t be undone.</p>
+
+            <div className="modal-body">
+              <p>This action can’t be undone.</p>
+            </div>
+
             <div className="modal-actions">
               <button
                 className="btn btn-ghost"
@@ -687,8 +720,8 @@ export default function Diary() {
 
       {/* Delete Profile Confirm */}
       {showDeleteProfile && (
-        <div className="modal-backdrop" onClick={() => setShowDeleteProfile(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop">
+          <div className="modal">
             <div className="modal-header">
               <h3>Delete Profile “{active}”?</h3>
               <button
@@ -700,43 +733,46 @@ export default function Diary() {
                 ×
               </button>
             </div>
-            <p>This will remove the profile and all of its diary entries.</p>
-            <form className="form" onSubmit={handleDeleteProfile}>
-              <div className="field">
-                <label htmlFor="deleteProfilePass">Password</label>
-                <input
-                  id="deleteProfilePass"
-                  className="input"
-                  type="password"
-                  placeholder="Enter profile password to confirm"
-                  value={deleteProfilePass}
-                  onChange={(e) => setDeleteProfilePass(e.target.value)}
-                />
-              </div>
 
-              {!!deleteProfileErr && (
-                <div style={{ color: "#d93025", marginTop: 8 }}>{deleteProfileErr}</div>
-              )}
+            <div className="modal-body">
+              <p>This will remove the profile and all of its diary entries.</p>
+              <form className="form" onSubmit={handleDeleteProfile}>
+                <div className="field">
+                  <label htmlFor="deleteProfilePass">Password</label>
+                  <input
+                    id="deleteProfilePass"
+                    className="input"
+                    type="password"
+                    placeholder="Enter profile password to confirm"
+                    value={deleteProfilePass}
+                    onChange={(e) => setDeleteProfilePass(e.target.value)}
+                  />
+                </div>
 
-              <div className="modal-actions">
-                <button
-                  className="btn btn-ghost"
-                  type="button"
-                  onClick={() => setShowDeleteProfile(false)}
-                  disabled={deletingProfile}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="btn"
-                  style={{ background: "#c62828" }}
-                  type="submit"
-                  disabled={deletingProfile}
-                >
-                  {deletingProfile ? "Deleting…" : "Delete Profile"}
-                </button>
-              </div>
-            </form>
+                {!!deleteProfileErr && (
+                  <div style={{ color: "#d93025", marginTop: 8 }}>{deleteProfileErr}</div>
+                )}
+              </form>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="btn btn-ghost"
+                type="button"
+                onClick={() => setShowDeleteProfile(false)}
+                disabled={deletingProfile}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn"
+                style={{ background: "#c62828" }}
+                onClick={handleDeleteProfile}
+                disabled={deletingProfile}
+              >
+                {deletingProfile ? "Deleting…" : "Delete Profile"}
+              </button>
+            </div>
           </div>
         </div>
       )}
