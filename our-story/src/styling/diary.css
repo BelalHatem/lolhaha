@@ -1,6 +1,4 @@
-/* ================================
-   Diary Page Layout
-   ================================ */
+/* PAGE LAYOUT */
 .diary-page {
   max-width: 1100px;
   margin: 120px auto 80px;
@@ -14,7 +12,7 @@
   margin-bottom: 18px;
 }
 
-/* Top bar: profile tabs + actions */
+/* TOP BAR */
 .diary-topbar {
   display: flex;
   align-items: center;
@@ -37,7 +35,7 @@
   padding: 8px 14px;
   cursor: pointer;
   font-weight: 600;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
+  transition: background .15s ease, border-color .15s ease;
 }
 .diary-tab.is-active {
   background: #0a4ed1;
@@ -47,7 +45,7 @@
 
 .diary-actions .btn { margin-left: 8px; }
 
-/* Unlock card */
+/* UNLOCK CARD */
 .unlock-card {
   display: flex;
   align-items: flex-end;
@@ -60,7 +58,7 @@
 }
 .unlock-title { font-weight: 700; margin-bottom: 6px; }
 
-/* Entry grid */
+/* GRID OF ENTRIES */
 .diary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -80,38 +78,39 @@
   transform: translateY(-1px);
   box-shadow: 0 14px 22px -12px rgba(0,0,0,.3);
 }
-.entry-title { font-weight: 800; margin-bottom: 6px; }
-.entry-date { font-style: italic; color: #666; font-size: 14px; }
+.entry-title { 
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+.entry-date {
+  font-style: italic;
+  color: #666;
+  font-size: 14px;
+}
 
-/* ================================
-   Form Controls
-   ================================ */
+/* INPUTS */
 .input, .textarea {
   width: 100%;
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,.12);
-  outline: none;
+  border: 1px solid rgba(0,0,0,.15);
   background: #fff;
-  box-shadow: inset 0 1px 0 rgba(0,0,0,.02);
+  outline: none;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,.03);
   transition: border-color .15s ease, box-shadow .15s ease;
 }
+
 .input:focus, .textarea:focus {
   border-color: #2263e0;
-  box-shadow:
-    0 0 0 3px rgba(34,99,224,.12),
-    inset 0 1px 0 rgba(0,0,0,.02);
+  box-shadow: 0 0 0 3px rgba(34,99,224,.15);
 }
-.textarea { resize: vertical; min-height: 160px; }
 
-/* Stacking gaps when consecutive */
-.input + .input,
-.input + .textarea,
-.textarea + .input { margin-top: 10px; }
+.textarea {
+  min-height: 150px;
+  resize: vertical;
+}
 
-/* ================================
-   Buttons
-   ================================ */
+/* BUTTONS */
 .btn {
   appearance: none;
   border: none;
@@ -122,48 +121,39 @@
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 10px 18px -12px rgba(11,87,208,.6);
-  transition: transform .05s ease, box-shadow .15s ease, background .15s ease;
 }
-.btn:active { transform: translateY(1px); }
 .btn:disabled { opacity: .6; cursor: not-allowed; }
-
 .btn-ghost {
   background: #fff;
   color: #222;
   border: 1px solid rgba(0,0,0,.12);
   box-shadow: none;
 }
-
 .btn-primary {
   background: #2263e0;
   color: #fff;
   box-shadow: 0 10px 20px -12px rgba(34,99,224,.55);
 }
-.btn-primary:disabled { opacity: .6; cursor: not-allowed; }
 
-/* ================================
-   Modal System
-   - Scroll inside body
-   - Sticky actions
-   - Floating close button
-   ================================ */
+/* MODAL BACKDROP */
 .modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,.4);
+  z-index: 50;
   display: grid;
   place-items: center;
-  z-index: 50;
-  padding: 12px; /* prevents modal from touching screen edges on tiny phones */
+  padding: 12px;
 }
 
+/* MODAL CONTAINER */
 .modal {
-  position: relative;           /* for floating close */
+  position: relative;
+  width: min(680px, 96vw);
+  max-height: 90vh;
   background: #fff;
-  width: min(680px, 92vw);
-  max-height: 90vh;             /* keeps modal on screen */
   border-radius: 18px;
-  padding: 0;                   /* use header/body/actions spacing instead */
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   box-shadow:
@@ -171,14 +161,32 @@
     0 10px 18px -10px rgba(0,0,0,.25);
 }
 
-/* Header */
+/* MODAL CLOSE BUTTON — FLOATING */
+.icon-btn.modal-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.95);
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  border: none;
+  cursor: pointer;
+  color: #111;
+  z-index: 10;
+  box-shadow: 0 3px 10px rgba(0,0,0,.15);
+}
+
+/* MODAL HEADER */
 .modal-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(0,0,0,.07);
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 18px 22px;
-  border-bottom: 1px solid rgba(0,0,0,.06);
+  align-items: center;
 }
 .modal-header h3 {
   margin: 0;
@@ -186,114 +194,41 @@
   font-weight: 800;
 }
 
-/* Floating close (always visible) */
-.modal-close,
-.icon-btn.modal-close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2;
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border: none;
-  border-radius: 999px;
-  background: rgba(255,255,255,.95);
-  color: #374151;       /* gray-700 */
-  font-size: 26px;
-  line-height: 1;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,.15);
-}
-@media (hover:hover) {
-  .modal-close:hover { background: #f3f4f6; }
-}
-
-/* Body scrolls */
+/* MODAL BODY SCROLLABLE */
 .modal-body {
-  padding: 18px 22px;
-  overflow: auto;      /* critical: allow long content to scroll */
+  padding: 20px;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  flex: 1 1 auto;      /* take remaining space between header and actions */
+  flex: 1 1 auto;
 }
 
-/* Sticky footer actions */
+/* MODAL ACTIONS STICKY (ALWAYS VISIBLE) */
 .modal-actions {
   position: sticky;
   bottom: 0;
   background: #fff;
-  padding: 12px 22px 16px;
+  padding: 14px 20px;
+  border-top: 1px solid rgba(0,0,0,.07);
   display: flex;
   gap: 10px;
   justify-content: flex-end;
-  border-top: 1px solid rgba(0,0,0,.06);
-  box-shadow: 0 -8px 18px -18px rgba(0,0,0,.35);
 }
 
-/* Icon button (used also for header ×) */
-.icon-btn {
-  appearance: none;
-  border: none;
-  background: transparent;
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-  color: #6b7280;  /* gray-500 */
-  border-radius: 8px;
-  padding: 4px 6px;
-}
-.icon-btn:hover { background: #f3f4f6; }
-
-/* Form layout inside modals */
-.form {
-  display: grid;
-  gap: 12px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 180px; /* title/date side-by-side on wide screens */
-  gap: 12px;
-}
+/* RESPONSIVE — PHONE OPTIMIZATION */
 @media (max-width: 640px) {
-  .form-row { grid-template-columns: 1fr; }
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.field label {
-  font-size: 13px;
-  font-weight: 700;
-  color: #1f2937; /* gray-800 */
-}
-
-.help {
-  margin-top: -2px;
-  font-size: 12px;
-  color: #6b7280;
-}
-
-/* Entry view text */
-.entry-view-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
-.entry-view-date  { font-style: italic; color: #666; margin-bottom: 12px; }
-.entry-view-body  { white-space: pre-wrap; line-height: 1.6; }
-
-/* ================================
-   Responsive tweaks
-   ================================ */
-@media (max-width: 900px) {
-  .diary-page { margin: 100px auto 70px; }
-}
-@media (max-width: 640px) {
-  .diary-page { margin: 90px auto 60px; padding: 0 14px; }
-  .diary-title { font-size: 30px; margin-bottom: 14px; }
-  .diary-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
-  .entry-card { padding: 12px; }
-  .modal { width: 96vw; }
-  .modal-header, .modal-body, .modal-actions { padding-left: 16px; padding-right: 16px; }
-  .modal-close { top: 8px; right: 8px; width: 36px; height: 36px; font-size: 24px; }
+  .modal {
+    width: 96vw;
+    max-height: 92vh;
+  }
+  .icon-btn.modal-close {
+    width: 48px;
+    height: 48px;
+    top: 6px;
+    right: 6px;
+    font-size: 28px;
+  }
+  .form-row { grid-template-columns: 1fr !important; }
+  .input, .textarea {
+    font-size: 16px; /* Prevent iOS zoom */
+  }
 }

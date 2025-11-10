@@ -1,4 +1,3 @@
-// src/component/diary.jsx
 import { useEffect, useState } from "react";
 import "../styling/diary.css";
 
@@ -6,8 +5,7 @@ import "../styling/diary.css";
 const api = {
   async listProfiles() {
     const res = await fetch("/api/profiles");
-    const data = await res.json();
-    return data.profiles || [];
+    return res.json();
   },
   async createProfile(name, password) {
     const res = await fetch("/api/profiles", {
@@ -26,8 +24,7 @@ const api = {
     return res.json();
   },
   async listEntries(profile, password) {
-    const qs = new URLSearchParams({ password }).toString();
-    const res = await fetch(`/api/diary/${encodeURIComponent(profile)}?${qs}`);
+    const res = await fetch(`/api/diary/${encodeURIComponent(profile)}?password=${encodeURIComponent(password)}`);
     return res.json();
   },
   async addEntry(profile, password, entry) {
@@ -62,21 +59,16 @@ export default function Diary() {
   const [unlocked, setUnlocked] = useState(false);
   const [entries, setEntries] = useState([]);
 
-  // Create profile modal
   const [showNewProfile, setShowNewProfile] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPass, setNewPass] = useState("");
   const [createErr, setCreateErr] = useState("");
-  const [creating, setCreating] = useState(false);
 
-  // New entry modal
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [entryTitle, setEntryTitle] = useState("");
   const [entryDate, setEntryDate] = useState("");
   const [entryBody, setEntryBody] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  // View / Edit entry modals
   const [showView, setShowView] = useState(false);
   const [viewing, setViewing] = useState(null);
 
@@ -85,30 +77,23 @@ export default function Diary() {
   const [editTitle, setEditTitle] = useState("");
   const [editDate, setEditDate] = useState("");
   const [editBody, setEditBody] = useState("");
-  const [updating, setUpdating] = useState(false);
 
-  // Delete entry confirm
-  const [showDeleteEntry, setShowDeleteEntry] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
-  const [deletingEntry, setDeletingEntry] = useState(false);
-
-  // Delete profile confirm
   const [showDeleteProfile, setShowDeleteProfile] = useState(false);
   const [deleteProfilePass, setDeleteProfilePass] = useState("");
   const [deleteProfileErr, setDeleteProfileErr] = useState("");
-  const [deletingProfile, setDeletingProfile] = useState(false);
 
-  // Unlock
+  const [showDeleteEntry, setShowDeleteEntry] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+
   const [passInput, setPassInput] = useState("");
   const [unlockErr, setUnlockErr] = useState("");
-  const [unlocking, setUnlocking] = useState(false);
 
-  /* ---------- load profiles ---------- */
+  /* LOAD PROFILES */
   useEffect(() => {
-    api.listProfiles().then(setProfiles).catch(console.error);
+    api.listProfiles().then((r) => setProfiles(r.profiles || []));
   }, []);
 
-  /* ---------- on profile change ---------- */
+  /* CHANGE PROFILE */
   useEffect(() => {
     if (!active) return;
     setUnlocked(false);
@@ -117,270 +102,141 @@ export default function Diary() {
     setEntries([]);
   }, [active]);
 
-  /* ---------- ESC to close whichever modal is open ---------- */
-  useEffect(() => {
-    function onKey(e) {
-      if (e.key !== "Escape") return;
-      // Close the "top-most" modal. Adjust order as you prefer.
-      if (showEdit) return setShowEdit(false);
-      if (showView) return setShowView(false);
-      if (showNewEntry) return setShowNewEntry(false);
-      if (showNewProfile) return setShowNewProfile(false);
-      if (showDeleteEntry) return setShowDeleteEntry(false);
-      if (showDeleteProfile) return setShowDeleteProfile(false);
-    }
-    const anyOpen =
-      showEdit || showView || showNewEntry || showNewProfile || showDeleteEntry || showDeleteProfile;
-    if (anyOpen) {
-      window.addEventListener("keydown", onKey);
-      return () => window.removeEventListener("keydown", onKey);
-    }
-  }, [showEdit, showView, showNewEntry, showNewProfile, showDeleteEntry, showDeleteProfile]);
-
-  /* ---------- create profile ---------- */
+  /* CREATE PROFILE */
   async function handleCreateProfile(e) {
     e.preventDefault();
-    if (creating) return;
-
-    setCreateErr("");
-    const name = newName.trim();
-    const pass = newPass.trim();
-    if (!name || !pass) {
+    if (!newName.trim() || !newPass.trim()) {
       setCreateErr("Please fill both fields.");
       return;
     }
-
-    setCreating(true);
-    try {
-      const result = await api.createProfile(name, pass);
-      if (result.error) {
-        setCreateErr(result.error);
-        return;
-      }
-      const updated = await api.listProfiles();
-      setProfiles(updated);
-      setActive(name);
+    const res = await api.createProfile(newName.trim(), newPass.trim());
+    if (res.error) setCreateErr(res.error);
+    else {
+      setProfiles(await api.listProfiles().then((r) => r.profiles));
+      setActive(newName.trim());
       setShowNewProfile(false);
       setNewName("");
       setNewPass("");
-    } catch (err) {
-      setCreateErr(err.message || "Failed to create profile.");
-    } finally {
-      setCreating(false);
     }
   }
 
-  /* ---------- unlock ---------- */
+  /* UNLOCK PROFILE */
   async function handleUnlock(e) {
     e.preventDefault();
-    if (!active || unlocking) return;
-
-    setUnlockErr("");
-    setUnlocking(true);
-    try {
-      const r = await api.listEntries(active, passInput);
-      if (r.error) {
-        setUnlocked(false);
-        setEntries([]);
-        setUnlockErr(r.error || "Incorrect password.");
-        return;
-      }
-      setUnlocked(true);
-      setEntries(r.entries || []);
-    } catch (err) {
-      setUnlockErr(err.message || "Failed to unlock.");
-    } finally {
-      setUnlocking(false);
+    const r = await api.listEntries(active, passInput);
+    if (r.error) {
+      setUnlockErr(r.error);
+      return;
     }
+    setUnlocked(true);
+    setEntries(r.entries || []);
   }
 
-  /* ---------- add entry ---------- */
+  /* SAVE ENTRY */
   async function handleAddEntry(e) {
     e.preventDefault();
-    if (saving) return;
-    if (!entryTitle.trim() || !entryDate.trim() || !entryBody.trim()) return;
-
-    setSaving(true);
-    try {
-      const resp = await api.addEntry(active, passInput, {
-        title: entryTitle.trim(),
-        date: entryDate.trim(),
-        body: entryBody,
-      });
-      if (resp.error) {
-        alert(resp.error || "Failed to save entry.");
-        return;
-      }
+    const res = await api.addEntry(active, passInput, {
+      title: entryTitle,
+      date: entryDate,
+      body: entryBody,
+    });
+    if (!res.error) {
       setShowNewEntry(false);
       setEntryTitle("");
       setEntryDate("");
       setEntryBody("");
-
-      const refreshed = await api.listEntries(active, passInput);
-      if (!refreshed.error) setEntries(refreshed.entries || []);
-    } catch (err) {
-      alert(err.message || "Failed to save entry.");
-    } finally {
-      setSaving(false);
+      const updated = await api.listEntries(active, passInput);
+      setEntries(updated.entries);
     }
   }
 
-  /* ---------- open view ---------- */
-  function openEntry(entry) {
-    setViewing(entry);
+  /* OPEN ENTRY */
+  function openEntry(en) {
+    setViewing(en);
     setShowView(true);
   }
 
-  /* ---------- open edit from view ---------- */
+  /* OPEN EDIT */
   function openEditFromView() {
-    if (!viewing) return;
     setShowView(false);
-    setEditId(viewing.id);
+    setShowEdit(true);
     setEditTitle(viewing.title);
     setEditDate(viewing.date);
-    setEditBody(viewing.body || "");
-    setShowEdit(true);
+    setEditBody(viewing.body);
+    setEditId(viewing.id);
   }
 
-  /* ---------- save edit ---------- */
+  /* SAVE EDIT */
   async function handleSaveEdit(e) {
     e.preventDefault();
-    if (updating) return;
-    if (!editTitle.trim() || !editDate.trim()) return;
-
-    setUpdating(true);
-    try {
-      const resp = await api.editEntry(active, passInput, editId, {
-        title: editTitle.trim(),
-        date: editDate.trim(),
-        body: editBody,
-      });
-      if (resp.error) {
-        alert(resp.error || "Failed to update entry.");
-        return;
-      }
-      setShowEdit(false);
-      setEditId(null);
-      const refreshed = await api.listEntries(active, passInput);
-      if (!refreshed.error) setEntries(refreshed.entries || []);
-    } catch (err) {
-      alert(err.message || "Failed to update entry.");
-    } finally {
-      setUpdating(false);
-    }
+    await api.editEntry(active, passInput, editId, {
+      title: editTitle,
+      date: editDate,
+      body: editBody,
+    });
+    setShowEdit(false);
+    const updated = await api.listEntries(active, passInput);
+    setEntries(updated.entries);
   }
 
-  /* ---------- delete entry ---------- */
-  async function confirmDeleteEntry(id) {
-    setDeleteId(id);
-    setShowView(false);
-    setShowDeleteEntry(true);
+  /* DELETE ENTRY */
+  async function handleDeleteEntryConfirm() {
+    await api.deleteEntry(active, passInput, deleteId);
+    setShowDeleteEntry(false);
+    const updated = await api.listEntries(active, passInput);
+    setEntries(updated.entries);
   }
 
-  async function handleDeleteEntry() {
-    if (deletingEntry) return;
-    setDeletingEntry(true);
-    try {
-      const resp = await api.deleteEntry(active, passInput, deleteId);
-      if (resp.error) {
-        alert(resp.error || "Failed to delete entry.");
-        return;
-      }
-      setShowDeleteEntry(false);
-      setDeleteId(null);
-      const refreshed = await api.listEntries(active, passInput);
-      if (!refreshed.error) setEntries(refreshed.entries || []);
-    } catch (err) {
-      alert(err.message || "Failed to delete entry.");
-    } finally {
-      setDeletingEntry(false);
-    }
-  }
-
-  /* ---------- delete profile ---------- */
-  function openDeleteProfile() {
-    setDeleteProfilePass("");
-    setDeleteProfileErr("");
-    setShowDeleteProfile(true);
-  }
-
+  /* DELETE PROFILE */
   async function handleDeleteProfile(e) {
     e.preventDefault();
-    if (deletingProfile) return;
-    setDeleteProfileErr("");
-
-    if (!active || !deleteProfilePass.trim()) {
-      setDeleteProfileErr("Enter your profile password to confirm.");
+    const r = await api.deleteProfile(active, deleteProfilePass);
+    if (r.error) {
+      setDeleteProfileErr(r.error);
       return;
     }
-
-    setDeletingProfile(true);
-    try {
-      const resp = await api.deleteProfile(active, deleteProfilePass.trim());
-      if (resp.error) {
-        setDeleteProfileErr(resp.error);
-        return;
-      }
-      const updated = (profiles || []).filter((p) => (p.name || p) !== active);
-      setProfiles(updated);
-      setActive("");
-      setUnlocked(false);
-      setEntries([]);
-      setShowDeleteProfile(false);
-    } catch (err) {
-      setDeleteProfileErr(err.message || "Failed to delete profile.");
-    } finally {
-      setDeletingProfile(false);
-    }
+    setShowDeleteProfile(false);
+    setActive("");
+    setUnlocked(false);
+    setProfiles(await api.listProfiles().then((r) => r.profiles));
   }
 
   return (
     <div className="diary-page">
       <h1 className="diary-title">Diary</h1>
 
+      {/* TOP BAR */}
       <div className="diary-topbar">
         <div className="diary-tabs">
-          {profiles.map((p) => {
-            const nm = p.name || p;
-            return (
-              <button
-                key={nm}
-                className={`diary-tab ${active === nm ? "is-active" : ""}`}
-                onClick={() => setActive(nm)}
-                type="button"
-              >
-                {nm}
-              </button>
-            );
-          })}
+          {profiles.map((p) => (
+            <button
+              key={p.name}
+              className={`diary-tab ${active === p.name ? "is-active" : ""}`}
+              onClick={() => setActive(p.name)}
+            >
+              {p.name}
+            </button>
+          ))}
         </div>
 
         <div className="diary-actions">
           {active && unlocked && (
             <button
               className="btn btn-ghost"
-              style={{ borderColor: "rgba(220,0,0,.2)", color: "#c62828" }}
-              onClick={openDeleteProfile}
-              title="Delete this profile"
+              style={{ color: "#c62828", borderColor: "rgba(200,0,0,.2)" }}
+              onClick={() => setShowDeleteProfile(true)}
             >
               Delete Profile
             </button>
           )}
-          <button className="btn" onClick={() => setShowNewProfile(true)}>
-            + New Profile
-          </button>
-          <button
-            className="btn"
-            onClick={() => setShowNewEntry(true)}
-            disabled={!active || !unlocked}
-          >
+          <button className="btn" onClick={() => setShowNewProfile(true)}>+ New Profile</button>
+          <button className="btn" onClick={() => setShowNewEntry(true)} disabled={!active || !unlocked}>
             + New Entry
           </button>
         </div>
       </div>
 
-      {!active && <p style={{ marginTop: 10 }}>Create a profile to start writing diaries.</p>}
-
+      {/* UNLOCK */}
       {active && !unlocked && (
         <div className="unlock-card">
           <div style={{ flex: 1 }}>
@@ -393,385 +249,159 @@ export default function Diary() {
                 value={passInput}
                 onChange={(e) => setPassInput(e.target.value)}
               />
-              {!!unlockErr && (
-                <div style={{ color: "#d93025", marginTop: 6, fontWeight: 600 }}>
-                  {unlockErr}
-                </div>
-              )}
+              {unlockErr && <div style={{ color: "#d93025", marginTop: 6 }}>{unlockErr}</div>}
             </form>
           </div>
-          <button className="btn" onClick={handleUnlock} disabled={unlocking}>
-            {unlocking ? "Unlocking…" : "Unlock"}
-          </button>
+          <button className="btn" onClick={handleUnlock}>Unlock</button>
         </div>
       )}
 
+      {/* ENTRY GRID */}
       {active && unlocked && (
         <div className="diary-grid">
           {entries.map((en) => (
-            <div
-              key={en.id || `${en.title}-${en.date}`}
-              className="entry-card"
-              onClick={() => openEntry(en)}
-            >
+            <div key={en.id} className="entry-card" onClick={() => openEntry(en)}>
               <div className="entry-title">{en.title}</div>
               <div className="entry-date">{en.date}</div>
             </div>
           ))}
-          {!entries.length && (
-            <div style={{ opacity: 0.75 }}>No entries yet. Click “+ New Entry”.</div>
-          )}
+          {!entries.length && <div style={{ opacity: .75 }}>No entries yet.</div>}
         </div>
       )}
 
-      {/* New Profile Modal */}
+      {/* MODALS — FULL CODE INCLUDED */}
+
+      {/* NEW PROFILE */}
       {showNewProfile && (
         <div className="modal-backdrop">
           <div className="modal">
+            <button className="icon-btn modal-close" onClick={() => setShowNewProfile(false)}>×</button>
             <div className="modal-header">
               <h3>Create Profile</h3>
-              <button
-                className="icon-btn"
-                type="button"
-                onClick={() => setShowNewProfile(false)}
-                aria-label="Close"
-              >
-                ×
-              </button>
             </div>
-
             <div className="modal-body">
-              <form className="form" onSubmit={handleCreateProfile}>
-                <div className="field">
-                  <label htmlFor="newProfileName">Profile name</label>
-                  <input
-                    id="newProfileName"
-                    className="input"
-                    placeholder="e.g. Belal"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    autoFocus
-                  />
-                </div>
+              <form onSubmit={handleCreateProfile}>
+                <label>Profile Name</label>
+                <input className="input" value={newName} onChange={(e) => setNewName(e.target.value)} />
 
-                <div className="field">
-                  <label htmlFor="newProfilePass">Password</label>
-                  <input
-                    id="newProfilePass"
-                    className="input"
-                    type="password"
-                    placeholder="Choose a password"
-                    value={newPass}
-                    onChange={(e) => setNewPass(e.target.value)}
-                  />
-                  <div className="help">
-                    This password will be required to view this profile’s diary.
-                  </div>
-                </div>
-
-                {!!createErr && (
-                  <div style={{ color: "#d93025", fontWeight: 700 }}>{createErr}</div>
-                )}
+                <label>Password</label>
+                <input className="input" type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)} />
+                {createErr && <div style={{ color: "red", marginTop: 6 }}>{createErr}</div>}
               </form>
             </div>
-
             <div className="modal-actions">
-              <button
-                className="btn btn-ghost"
-                type="button"
-                onClick={() => setShowNewProfile(false)}
-                disabled={creating}
-              >
-                Cancel
-              </button>
-              <button className="btn btn-primary" onClick={handleCreateProfile} disabled={creating}>
-                {creating ? "Creating…" : "Create"}
-              </button>
+              <button className="btn btn-ghost" onClick={() => setShowNewProfile(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleCreateProfile}>Create</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* New Entry Modal */}
+      {/* NEW ENTRY */}
       {showNewEntry && (
         <div className="modal-backdrop">
           <div className="modal">
+            <button className="icon-btn modal-close" onClick={() => setShowNewEntry(false)}>×</button>
             <div className="modal-header">
               <h3>New Entry</h3>
-              <button
-                className="icon-btn"
-                type="button"
-                onClick={() => setShowNewEntry(false)}
-                aria-label="Close"
-              >
-                ×
-              </button>
             </div>
-
             <div className="modal-body">
-              <form className="form" onSubmit={handleAddEntry}>
-                <div className="form-row">
-                  <div className="field">
-                    <label htmlFor="entryTitle">Title</label>
-                    <input
-                      id="entryTitle"
-                      className="input"
-                      placeholder="Title"
-                      value={entryTitle}
-                      onChange={(e) => setEntryTitle(e.target.value)}
-                    />
-                  </div>
+              <form onSubmit={handleAddEntry}>
+                <label>Title</label>
+                <input className="input" value={entryTitle} onChange={(e) => setEntryTitle(e.target.value)} />
 
-                  <div className="field">
-                    <label htmlFor="entryDate">Date</label>
-                    <input
-                      id="entryDate"
-                      className="input"
-                      type="date"
-                      value={entryDate}
-                      onChange={(e) => setEntryDate(e.target.value)}
-                    />
-                  </div>
-                </div>
+                <label>Date</label>
+                <input className="input" type="date" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} />
 
-                <div className="field">
-                  <label htmlFor="entryBody">Entry</label>
-                  <textarea
-                    id="entryBody"
-                    className="textarea"
-                    placeholder="Write about your day…"
-                    rows={10}
-                    value={entryBody}
-                    onChange={(e) => setEntryBody(e.target.value)}
-                  />
-                </div>
+                <label>Entry</label>
+                <textarea className="textarea" value={entryBody} onChange={(e) => setEntryBody(e.target.value)} />
               </form>
             </div>
-
             <div className="modal-actions">
-              <button
-                className="btn btn-ghost"
-                type="button"
-                onClick={() => setShowNewEntry(false)}
-                disabled={saving}
-              >
-                Cancel
-              </button>
-              <button className="btn btn-primary" onClick={handleAddEntry} disabled={saving}>
-                {saving ? "Saving…" : "Save"}
-              </button>
+              <button className="btn btn-ghost" onClick={() => setShowNewEntry(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleAddEntry}>Save</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* View Entry Modal */}
+      {/* VIEW ENTRY */}
       {showView && viewing && (
         <div className="modal-backdrop">
           <div className="modal">
+            <button className="icon-btn modal-close" onClick={() => setShowView(false)}>×</button>
             <div className="modal-header">
               <h3>{viewing.title}</h3>
-              <button
-                className="icon-btn"
-                type="button"
-                onClick={() => setShowView(false)}
-                aria-label="Close"
-              >
-                ×
-              </button>
             </div>
-
             <div className="modal-body">
               <div className="entry-view-date">{viewing.date}</div>
               <div className="entry-view-body">{viewing.body}</div>
             </div>
-
             <div className="modal-actions">
-              <button className="btn btn-primary" onClick={openEditFromView}>
-                Edit
-              </button>
-              <button
-                className="btn btn-ghost"
-                style={{ borderColor: "rgba(220,0,0,.2)", color: "#c62828" }}
-                onClick={() => confirmDeleteEntry(viewing.id)}
-              >
-                Delete
-              </button>
-              <button className="btn btn-ghost" onClick={() => setShowView(false)}>
-                Close
-              </button>
+              <button className="btn btn-primary" onClick={openEditFromView}>Edit</button>
+              <button className="btn btn-ghost" onClick={() => { setDeleteId(viewing.id); setShowView(false); setShowDeleteEntry(true); }}>Delete</button>
+              <button className="btn btn-ghost" onClick={() => setShowView(false)}>Close</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Edit Entry Modal */}
+      {/* EDIT ENTRY */}
       {showEdit && (
         <div className="modal-backdrop">
           <div className="modal">
-            <div className="modal-header">
-              <h3>Edit Entry</h3>
-              <button
-                className="icon-btn"
-                type="button"
-                onClick={() => setShowEdit(false)}
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-
+            <button className="icon-btn modal-close" onClick={() => setShowEdit(false)}>×</button>
+            <div className="modal-header"><h3>Edit Entry</h3></div>
             <div className="modal-body">
-              <form className="form" onSubmit={handleSaveEdit}>
-                <div className="form-row">
-                  <div className="field">
-                    <label htmlFor="editTitle">Title</label>
-                    <input
-                      id="editTitle"
-                      className="input"
-                      placeholder="Title"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                    />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="editDate">Date</label>
-                    <input
-                      id="editDate"
-                      className="input"
-                      type="date"
-                      value={editDate}
-                      onChange={(e) => setEditDate(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="field">
-                  <label htmlFor="editBody">Entry</label>
-                  <textarea
-                    id="editBody"
-                    className="textarea"
-                    rows={10}
-                    placeholder="Write about your day…"
-                    value={editBody}
-                    onChange={(e) => setEditBody(e.target.value)}
-                  />
-                </div>
+              <form onSubmit={handleSaveEdit}>
+                <label>Title</label>
+                <input className="input" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                <label>Date</label>
+                <input className="input" type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+                <label>Entry</label>
+                <textarea className="textarea" value={editBody} onChange={(e) => setEditBody(e.target.value)} />
               </form>
             </div>
-
             <div className="modal-actions">
-              <button
-                className="btn btn-ghost"
-                type="button"
-                onClick={() => setShowEdit(false)}
-                disabled={updating}
-              >
-                Cancel
-              </button>
-              <button className="btn btn-primary" onClick={handleSaveEdit} disabled={updating}>
-                {updating ? "Saving…" : "Save"}
-              </button>
+              <button className="btn btn-ghost" onClick={() => setShowEdit(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveEdit}>Save</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Delete Entry Confirm */}
+      {/* DELETE ENTRY CONFIRM */}
       {showDeleteEntry && (
         <div className="modal-backdrop">
           <div className="modal">
-            <div className="modal-header">
-              <h3>Delete Entry?</h3>
-              <button
-                className="icon-btn"
-                type="button"
-                onClick={() => setShowDeleteEntry(false)}
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-
+            <button className="icon-btn modal-close" onClick={() => setShowDeleteEntry(false)}>×</button>
+            <div className="modal-header"><h3>Delete Entry?</h3></div>
             <div className="modal-body">
-              <p>This action can’t be undone.</p>
+              <p>This action cannot be undone.</p>
             </div>
-
             <div className="modal-actions">
-              <button
-                className="btn btn-ghost"
-                onClick={() => setShowDeleteEntry(false)}
-                disabled={deletingEntry}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn"
-                style={{ background: "#c62828" }}
-                onClick={handleDeleteEntry}
-                disabled={deletingEntry}
-              >
-                {deletingEntry ? "Deleting…" : "Delete"}
-              </button>
+              <button className="btn btn-ghost" onClick={() => setShowDeleteEntry(false)}>Cancel</button>
+              <button className="btn" style={{ background: "#c62828" }} onClick={handleDeleteEntryConfirm}>Delete</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Delete Profile Confirm */}
+      {/* DELETE PROFILE CONFIRM */}
       {showDeleteProfile && (
         <div className="modal-backdrop">
           <div className="modal">
-            <div className="modal-header">
-              <h3>Delete Profile “{active}”?</h3>
-              <button
-                className="icon-btn"
-                type="button"
-                onClick={() => setShowDeleteProfile(false)}
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-
+            <button className="icon-btn modal-close" onClick={() => setShowDeleteProfile(false)}>×</button>
+            <div className="modal-header"><h3>Delete Profile?</h3></div>
             <div className="modal-body">
-              <p>This will remove the profile and all of its diary entries.</p>
-              <form className="form" onSubmit={handleDeleteProfile}>
-                <div className="field">
-                  <label htmlFor="deleteProfilePass">Password</label>
-                  <input
-                    id="deleteProfilePass"
-                    className="input"
-                    type="password"
-                    placeholder="Enter profile password to confirm"
-                    value={deleteProfilePass}
-                    onChange={(e) => setDeleteProfilePass(e.target.value)}
-                  />
-                </div>
-
-                {!!deleteProfileErr && (
-                  <div style={{ color: "#d93025", marginTop: 8 }}>{deleteProfileErr}</div>
-                )}
-              </form>
+              <p>This will delete all entries for this profile.</p>
+              <input className="input" type="password" placeholder="Enter password to confirm"
+                value={deleteProfilePass} onChange={(e) => setDeleteProfilePass(e.target.value)} />
+              {deleteProfileErr && <div style={{ color: "red", marginTop: 6 }}>{deleteProfileErr}</div>}
             </div>
-
             <div className="modal-actions">
-              <button
-                className="btn btn-ghost"
-                type="button"
-                onClick={() => setShowDeleteProfile(false)}
-                disabled={deletingProfile}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn"
-                style={{ background: "#c62828" }}
-                onClick={handleDeleteProfile}
-                disabled={deletingProfile}
-              >
-                {deletingProfile ? "Deleting…" : "Delete Profile"}
-              </button>
+              <button className="btn btn-ghost" onClick={() => setShowDeleteProfile(false)}>Cancel</button>
+              <button className="btn" style={{ background: "#c62828" }} onClick={handleDeleteProfile}>Delete Profile</button>
             </div>
           </div>
         </div>
