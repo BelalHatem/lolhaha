@@ -23,6 +23,38 @@ import three from "../images/3.JPG";
 import four from "../images/4.JPG";
 import five from "../images/5.JPG";
 import six from "../images/6.JPG";
+import archiebrother from "../images/archiebrother.MOV";
+import newyear1 from "../images/newyear1.JPG";
+import newyear2 from "../images/newyear2.MOV";
+import rainbowsend1 from "../images/rainbowsend1.JPG";
+import rainbowsend2 from "../images/rainbowsend2.JPG";
+import benson1 from "../images/benson1.MOV";
+import benson2 from "../images/benson2.MOV";
+import valentine1 from "../images/valentine1.JPG";
+import valentine2 from "../images/valentine2.JPG";
+import valentine3 from "../images/valentine3.JPG";
+import valentine4 from "../images/valentine4.JPG";
+import urbirthday1 from "../images/urbirthday1.JPG";
+import urbirthday2 from "../images/urbirthday2.JPG";
+import urbirthday3 from "../images/urbirthday3.JPG";
+import urbirthday4 from "../images/urbirthday4.JPG";
+import tiktok1 from "../images/tiktok1.MOV";
+import tiktok2 from "../images/tiktok2.MOV";
+import beachdate1 from "../images/beachdate1.JPG";
+import beachdate2 from "../images/beachdate2.JPG";
+import beachdate3 from "../images/beachdate3.JPG";
+import anniversary1 from "../images/anniversary1.JPG";
+import anniversary2 from "../images/anniversary2.JPG";
+import anniversary3 from "../images/anniversary3.JPG";
+import anniversary4 from "../images/anniversary4.JPG";
+import arabnight1 from "../images/arabnight1.PNG";
+import arabnight2 from "../images/arabnight2.JPEG";
+import arabnight3 from "../images/arabnight3.JPEG";
+import arabnight4 from "../images/arabnight4.JPEG";
+import flowergirl from "../images/flowergirl.JPG";
+
+
+
 
 import "../styling/ourstory.css";
 
@@ -274,8 +306,19 @@ const MEMORIES = [
   variant: "lg",
 },
 
-  {
+{
     id: 25,
+    type: "video",
+    date: "18.11.2024",
+    src: archiebrother,
+    alt: "archiebrothers",
+    text:
+      "",
+    variant: "lg",
+  },
+
+  {
+    id: 26,
     type: "gallery",
     date: "13.12.2024",
     alt: "collage gallery",
@@ -291,6 +334,152 @@ const MEMORIES = [
     ],
     text:
       "I feel like there may be so many memories I may be missing and I look back and wish I could save and capture every moment with you, but I guess the beauty of it is that I typically enjoy things in the moment, hence why this may be a short memory page. But Ik damn well we've got a million combined, still in the process of adding more...",
+    variant: "lg",
+  },
+
+  {
+    id: 27,
+    type: "gallery",
+    date: "31.12.2024",
+    alt: "collage gallery",
+    gallery: [
+      { src: newyear1, type: "image" },
+      { src: newyear2, type: "video" },
+    ],
+    text:
+     "",
+    variant: "lg",
+  },
+
+  {
+    id: 28,
+    type: "gallery",
+    date: "20.01.2025",
+    alt: "collage gallery",
+    gallery: [
+      { src: rainbowsend1, type: "image" },
+      { src: rainbowsend2, type: "image" },
+    ],
+    text:
+     "",
+    variant: "lg",
+  },
+
+  {
+    id: 29,
+    type: "gallery",
+    date: "25.01.2025",
+    alt: "collage gallery",
+    gallery: [
+      { src: benson1, type: "video" },
+      { src: benson2, type: "video" },
+    ],
+    text:
+     "",
+    variant: "lg",
+  },
+
+  {
+    id: 30,
+    type: "gallery",
+    date: "25.01.2025",
+    alt: "collage gallery",
+    gallery: [
+      { src: valentine1, type: "image" },
+      { src: valentine2, type: "image" },
+      { src: valentine3, type: "image" },
+      { src: valentine4, type: "image" },
+    ],
+    text:
+     "",
+    variant: "lg",
+  },
+
+  {
+    id: 31,
+    type: "gallery",
+    date: "6.04.2025",
+    alt: "collage gallery",
+    gallery: [
+      { src: urbirthday1, type: "image" },
+      { src: urbirthday2, type: "image" },
+      { src: urbirthday3, type: "image" },
+      { src: urbirthday4, type: "image" },
+    ],
+    text:
+     "",
+    variant: "lg",
+  },
+
+  {
+    id: 32,
+    type: "gallery",
+    date: "18.05.2025",
+    alt: "collage gallery",
+    gallery: [
+      { src: tiktok1, type: "video" },
+      { src: tiktok2, type: "video" },
+    ],
+    text:
+     "",
+    variant: "lg",
+  },
+
+  {
+    id: 33,
+    type: "gallery",
+    date: "19.06.2025",
+    alt: "collage gallery",
+    gallery: [
+      { src: beachdate1, type: "image" },
+      { src: beachdate2, type: "image" },
+      { src: beachdate3, type: "image" },
+    ],
+    text:
+     "",
+    variant: "lg",
+  },
+
+   {
+    id: 34,
+    type: "gallery",
+    date: "16.07.2025",
+    alt: "collage gallery",
+    gallery: [
+      { src: anniversary1, type: "image" },
+      { src: anniversary2, type: "image" },
+      { src: anniversary3, type: "image" },
+      { src: anniversary4, type: "image" },
+    ],
+    text:
+     "",
+    variant: "lg",
+  },
+
+  {
+    id: 35,
+    type: "gallery",
+    date: "29.08.2025",
+    alt: "collage gallery",
+    gallery: [
+      { src: arabnight1, type: "image" },
+      { src: arabnight2, type: "image" },
+      { src: arabnight3, type: "image" },
+      { src: arabnight4, type: "image" },
+    ],
+    text:
+     "",
+    variant: "lg",
+  },
+
+  {
+    id: 36,
+    type: "image",
+    date: "16.11.2025",
+    src: flowergirl,
+    alt: "collage gallery",
+    text:
+     "Dear cloe, I hope this message finds you well, I am sorry. Because of my mistakes and my flaws, it has cost us a beautiful relationship, I did something so disgusting and so unforgiveable that I'll never be able to forgive myself for. I am so sorry that I hurt you so much, I am so sorry that I am so stupid to have thrown this whole relationship away because of what I did. I want you to know that although it feels like our whole relationship was built on a lie, the love I had for you was real, the care I had for you was real and the feelings I had for you were real. It was too late for me to fix anything so I decided to be selfish and be a coward by hiding it away hoping that it won't taint our relationship, yet it did. I am sorry for being selfish and deciding that if I kept it away our whole life would be butterflies and rainbows but it won't be. I hope one day you can find the strength to forgive me and if miraculously we ever go back, I swear on my life that I would do it right this time. No more lying, no more secrets, no more bullshit, I want to be able to do it right with you. I don't deserve the love you gave me and you don't deserve to be with someone like me who fucked up to this extreme. I regretted it and the guilt ate me up everyday yet I forced myself to disregard it. It felt nice to finally release this guilt and tell you everything but I also realise how much of a bad person I am for it all. I never would of thought I would of ever done something like this, something so harsh that it would hurt you this bad. I am sorry. I am willing to do whatever it takes to fix everything I messed up and make it all right. I know I hurt you to the point of no return but I am willing to learn, to change, to grow for not only you but for myself. We shared something so beautiful and so real but I still managed to find a way to fuck it all up. I know I am the reason as to why we can't be together anymore, but I promise you that if we ever were to try again, I'll be here sticking by the idea of working on myself and working on being a better person to find my way back to you given you would give me another chance to make things right. I'd do anything to make up for the things I did. The love I had for you was genuine, the experiences we had together were all real, the only lie about it all was me hiding behind dark secrets. It's the hardest part to live with knowing I can't be with you because of what I did, my own mistakes, my own flaws ruined the one thing that made me feel whole. I lost a lot of people, and I will continue to lose more because of my actions. But again if you ever find it in your heart or in your soul to forgive me for what I did, I am willing to wait patiently till that day comes back for us to try again and for me to make things right between us. I don't love no one but you, I don't wanna be with anyone else but you. I will be living with the reality that I fucked up so hard and that I do genuinely need help for the mistakes I made. I never wanted to hurt someone like you yet I did, and for that I apologise, I know space and healing is what you need right now, I know you said that there is never gonna be an us again but regardless of all of what you said, I'll be here patiently waiting for you. I am so fucking sorry for hurting you and for what I did. Thank you for everything you made me experience and for the love you gave me. regardless of everything that happened, I'll always remember that I'm the idiot that went and fucked it all up for us to be together again, yet here I am waiting for the day I might get the chance to make it all right again, no more lies, no more dark secrets, no more hurt. I just want to love you for you and to make you feel the happiness and love you deserve. And for this, I end this message saying again that I am truly and deeply sorry for all that I have put you through, may life only find happiness for you, and for you to receive the love you deserve. Belal.",
     variant: "lg",
   },
 ];

@@ -7,5 +7,5 @@ export default defineConfig({
   build: {
     outDir: 'dist',
   },
-  assetsInclude: ['**/*.PNG', '**/*.JPG', '**/*.JPEG']
+  assetsInclude: ['**/*.PNG', '**/*.JPG', '**/*.JPEG','**/*.MOV', '**/*.mov']
 })
