@@ -377,7 +377,7 @@ const MEMORIES = [
   {
     id: 30,
     type: "gallery",
-    date: "25.01.2025",
+    date: "14.02.2025",
     alt: "collage gallery",
     gallery: [
       { src: valentine1, type: "image" },
