@@ -351,6 +351,35 @@ export default function Diary() {
               Edit
             </button>
 
+            {/* Floating Delete button */}
+            <button
+            className="icon-btn"
+            type="button"
+            onClick={() => {
+              setDeleteId(viewing.id);
+              setShowView(false);
+              setShowDeleteEntry(true);
+            }}
+            aria-label="Delete"
+            title="Delete"
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 140,      // moved further left than Edit
+              zIndex: 3,
+              fontSize: 16,
+              padding: "6px 10px",
+              borderRadius: 999,
+              background: "#c62828",
+              color: "#fff",
+              boxShadow: "0 8px 18px -10px rgba(198,40,40,.55)",
+              cursor: "pointer",
+            }}
+            >
+            Delete
+            </button>
+
+
             <div className="modal-header" style={{ paddingRight: 110 }}>
               <h3>{viewing.title}</h3>
             </div>

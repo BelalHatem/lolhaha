@@ -172,6 +172,16 @@
     flex-direction: column;
     padding: 18px;
   }
+
+  /* Force consistent vertical order on mobile */
+  .ourstory-container .story-text {
+    order: 1;      /* text always on top */
+  }
+
+  .ourstory-container .story-media {
+    order: 2;      /* image/video always underneath */
+  }
+
   .story-text {
     padding: 16px;
   }
@@ -181,3 +191,4 @@
     max-width: 100%;
   }
 }
+
