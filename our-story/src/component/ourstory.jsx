@@ -305,8 +305,8 @@ const MEMORIES = [
     id: 25,
     type: "video",
     date: "18.11.2024",
-    src: archiebrother,
-    alt: "https://res.cloudinary.com/dy6seijhm/video/upload/v1764054003/archiebrothers_xr0q8a.mp4",
+    src: "https://res.cloudinary.com/dy6seijhm/video/upload/v1764054003/archiebrothers_xr0q8a.mp4",
+    alt: "archie brothers",
     text:
       "",
     variant: "lg",
